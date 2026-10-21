@@ -4,12 +4,15 @@ name: Release
 # as neonplan3d.zip (HACS installs this file because hacs.json sets zip_release) and attach it. The
 # asset's download count is the number of HACS installs and updates of that version.
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
 permissions:
   contents: write
 
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && 'v1.24.0-custom.2' || github.ref_name }}
 jobs:
   zip:
     runs-on: ubuntu-latest
@@ -17,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Tag matches the manifest version
         run: |
-          tag="${GITHUB_REF_NAME#v}"
+          tag="${RELEASE_TAG#v}"
           version=$(python3 -c "import json; print(json.load(open('custom_components/neonplan3d/manifest.json'))['version'])")
           if [ "$tag" != "$version" ]; then
             echo "Tag $GITHUB_REF_NAME does not match manifest version $version" >&2
@@ -33,4 +36,4 @@ jobs:
       - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" neonplan3d.zip --clobber
+        run: gh release upload "$RELEASE_TAG" neonplan3d.zip --clobber
