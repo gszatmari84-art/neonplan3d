@@ -276,6 +276,32 @@ export function sectionGeometry(s: RoofSection, ov: SectionOverhang): SectionGeo
     const c = [a0, a1, b1, b0];
     return { faces: [c], rim: c, ridges: [[b1, b0]], gable: [[0, pr.y(0)], [w, pr.y(w)]] };
   }
+// Experimental six-sided bay hip: the points run around the eaves from
+// rear-left -> left shoulder -> front-left -> front-right -> right shoulder -> rear-right.
+// The ridge runs from the rear (main roof) to its outer end. No automatic valleys.
+if (s.shape === "hip" && s.points?.length === 6 && s.custom_ridge?.length === 2 &&
+    Number.isFinite(s.custom_ridge_height)) {
+  const local = (p: Vec2, y: number): Q => {
+    const [u, v] = sectionUV(s, p[0], p[1]);
+    return [u, v, y];
+  };
+  const eave = s.eave_a;
+  const p = s.points.map((pt) => local(pt, eave));
+  const r0 = local(s.custom_ridge[0], s.custom_ridge_height!);
+  const r1 = local(s.custom_ridge[1], s.custom_ridge_height!);
+  return {
+    faces: [
+      [p[0], p[1], r1, r0],
+      [p[1], p[2], r1],
+      [p[2], p[3], r1],
+      [p[3], p[4], r1],
+      [p[4], p[5], r0, r1],
+    ],
+    rim: p,
+    ridges: [[r0, r1], [p[1], r1], [p[2], r1], [p[3], r1], [p[4], r1]],
+    gable: null,
+  };
+}
   if (s.shape === "hip" || s.shape === "pyramid") {
     // hips rise from the corners: the ridge is shorter by the run of the slopes at both ends (a pyramid has none left)
     const d = s.shape === "pyramid" ? (fr.u1 - fr.u0) / 2 : Math.min((fr.u1 - fr.u0) / 2, Math.min(pr.vr, w - pr.vr) || w / 2);

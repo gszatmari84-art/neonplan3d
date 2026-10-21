@@ -1945,6 +1945,7 @@ export class Fp3dEditor extends LitElement {
             if (!sec) return;
             Object.assign(sec, { x0: round(src.x0 + dx), x1: round(src.x1 + dx), z0: round(src.z0 + dz), z1: round(src.z1 + dz) });
             if (src.points) sec.points = src.points.map(([x, z]) => [round(x + dx), round(z + dz)] as Vec2);
+            if (src.custom_ridge) sec.custom_ridge = src.custom_ridge.map(([x, z]) => [round(x + dx), round(z + dz)] as Vec2) as [Vec2, Vec2];
           },
           drag.base,
           false,
@@ -2245,10 +2246,23 @@ export class Fp3dEditor extends LitElement {
           (doc) => {
             const sec = doc.settings.roof.sections?.find((x) => x.id === drag.id);
             if (!sec) return;
-            if (drag.corner[0]) sec.x1 = round(p[0]);
-            else sec.x0 = round(p[0]);
-            if (drag.corner[1]) sec.z1 = round(p[1]);
-            else sec.z0 = round(p[1]);
+const src = drag.base.settings.roof.sections?.find((x) => x.id === drag.id);
+if (!src) return;
+const x0 = drag.corner[0] ? src.x0 : p[0];
+const x1 = drag.corner[0] ? p[0] : src.x1;
+const z0 = drag.corner[1] ? src.z0 : p[1];
+const z1 = drag.corner[1] ? p[1] : src.z1;
+if (src.points?.length === 6 && src.custom_ridge) {
+  // Transform the polygon and ridge relative to the original bounds.
+  // Avoid accumulating distortion during successive pointermove events.
+  const mapPoint = ([x, z]: Vec2): Vec2 => [
+    round(x0 + (x - src.x0) * ((x1 - x0) / (src.x1 - src.x0 || 1))),
+    round(z0 + (z - src.z0) * ((z1 - z0) / (src.z1 - src.z0 || 1))),
+  ];
+  sec.points = src.points.map(mapPoint);
+  sec.custom_ridge = src.custom_ridge.map(mapPoint) as [Vec2, Vec2];
+}
+Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) });
           },
           drag.base,
           false,

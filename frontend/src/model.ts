@@ -416,6 +416,10 @@ export interface RoofSection {
    * overhang comes on top); x0 … z1 then hold the polygon's bounding box.
    */
   points?: Vec2[] | null;
+/** Custom ridge endpoints for polygonal roof sections. */
+custom_ridge?: [Vec2, Vec2] | null;
+/** Custom ridge height in metres. */
+custom_ridge_height?: number | null;
   /** A dormer: a small section on the slope of another one, open towards that slope at its rear. */
   dormer?: boolean;
   /** Fixed: cannot be moved or resized by accident (the plan lock fixes every section too). */
