@@ -1,4 +1,4 @@
-# NeonPlan 3D
+# NeonPlan 3D Custom
 
 [![Spenden mit PayPal](https://img.shields.io/badge/PayPal-Spenden-00457C?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=Z3G2VWKSK5VJL)
 
@@ -6,7 +6,7 @@
 
 ▶️ **[Try the online demo](https://neonplan3d.mastershort.de/)** – in your browser, with invented demo data: turn the house, switch lights, open the editor. Nothing to install.
 
-[![Open your Home Assistant instance and open the NeonPlan 3D repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Mastershort&repository=neonplan3d&category=integration)
+[![Open your Home Assistant instance and open the NeonPlan 3D repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=gszatmari84-art&repository=neonplan3d&category=integration)
 
 [![NeonPlan 3D: the house turns with its solar roof and energy cards, voice control opens the living room, the doorbell rings and the live director looks through the front door camera, then back to the whole house](docs/images/demo.webp)](https://neonplan3d.mastershort.de/)
 
@@ -89,9 +89,9 @@ Bought packs and modules are signed for your installation and update by themselv
 
 ### HACS
 
-[![Open your Home Assistant instance and open the NeonPlan 3D repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Mastershort&repository=neonplan3d&category=integration)
+[![Open your Home Assistant instance and open the NeonPlan 3D repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=gszatmari84-art&repository=neonplan3d&category=integration)
 
-1. Click the button above, or in HACS: ⋮ → *Custom repositories* → add `https://github.com/Mastershort/neonplan3d` as **Integration**.
+1. Click the button above, or in HACS: ⋮ → *Custom repositories* → add `https://github.com/gszatmari84-art/neonplan3d` as **Integration**.
 2. Install **NeonPlan 3D** and restart Home Assistant.
 3. Add the integration:
 
