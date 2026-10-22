@@ -8,7 +8,7 @@ import { generateWalls } from "./geometry/walls.ts";
 const DEG = Math.PI / 180;
 
 /**
- * Local frame of a section: u runs along the ridge (u0 … u1 at the wall faces), v across it from
+ * Local frame of a section: u runs along the ridge (u0 Ä‚ËĂ˘â€šÂ¬Ă‚Â¦ u1 at the wall faces), v across it from
  * side a (v = 0) to side b (v = w).
  */
 export interface SectionFrame {
@@ -32,7 +32,7 @@ export function sectionFrame(s: Pick<RoofSection, "x0" | "z0" | "x1" | "z1" | "a
 
 /** Height profile across a section: the ridge position and height, and the roof height at any v. */
 export interface SectionProfile {
-  /** Ridge across (0 … w); a pent roof has its high edge at w. */
+  /** Ridge across (0 Ä‚ËĂ˘â€šÂ¬Ă‚Â¦ w); a pent roof has its high edge at w. */
   vr: number;
   /** Height of the ridge (or the high edge) above the ground. */
   rh: number;
@@ -49,7 +49,7 @@ export function sectionProfile(s: Pick<RoofSection, "x0" | "z0" | "x1" | "z1" | 
   if (s.shape === "flat" || s.shape === "parapet") return { vr: w / 2, rh: ea, y: () => ea };
   if (s.shape === "pent") return { vr: w, rh: ea + w * ta, y: (v) => ea + v * ta };
   if (s.shape === "mansard") {
-    // two slopes a side: the steep lower one (the pitch set) up to the break, a 30° upper one to the ridge
+    // two slopes a side: the steep lower one (the pitch set) up to the break, a 30Ä‚â€šĂ‚Â° upper one to the ridge
     const m = mansardParts(w, ea, eb, ta, tb);
     return { vr: m.vr, rh: m.rh, y: m.y };
   }
@@ -97,6 +97,8 @@ export function roofUnderAt(b: RoofHolder, x: number, z: number): number | null 
     const flat = s.shape === "flat" || s.shape === "parapet";
     const so = Math.max(0, s.overhang ?? o);
     const planes = flat ? null : sectionHeightAt(sectionGeometry(s, { u0: so, u1: so, a: so, b: so }), u, v);
+    // Polygon hip roofs must use their actual faces, not the legacy hip profile.
+    if (s.shape === "hip" && s.points?.length === 6 && planes === null) continue;
     const y = (planes ?? sectionProfile(s).y(v)) - ROOF_THICK;
     best = best === null ? y : Math.max(best, y);
   }
@@ -105,7 +107,7 @@ export function roofUnderAt(b: RoofHolder, x: number, z: number): number | null 
 
 /**
  * Where a sloped section leaves `headroom` metres above a floor at `level`: lines across the section
- * (in plan coordinates), one per slope that crosses that height – the editor draws them in attic rooms.
+ * (in plan coordinates), one per slope that crosses that height Ä‚ËĂ˘â€šÂ¬Ă˘â‚¬Ĺ› the editor draws them in attic rooms.
  */
 export function headroomLines(b: RoofHolder, level: number, headroom: number): [Vec2, Vec2][] {
   const out: [Vec2, Vec2][] = [];
@@ -174,7 +176,7 @@ export function sectionPolygon(s: Pick<RoofSection, "x0" | "z0" | "x1" | "z1" | 
   return [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
 }
 
-/** The bounding box of a polygon as the section's x0 … z1. */
+/** The bounding box of a polygon as the section's x0 Ä‚ËĂ˘â€šÂ¬Ă‚Â¦ z1. */
 export function polygonBox(points: readonly Vec2[]): Pick<RoofSection, "x0" | "z0" | "x1" | "z1"> {
   const xs = points.map((p) => p[0]);
   const zs = points.map((p) => p[1]);
@@ -439,7 +441,7 @@ export function dormerHole(parent: RoofSection, d: RoofSection): { u0: number; u
 
 /**
  * A new dormer on a side of a section: 2 m wide, its front flush with the eave wall, its eaves 1.4 m
- * above the section's eave, 35° gable; as deep as its ridge needs to meet the slope.
+ * above the section's eave, 35Ä‚â€šĂ‚Â° gable; as deep as its ridge needs to meet the slope.
  */
 export function proposeDormer(parent: RoofSection, side: "a" | "b", id: string, along?: number): RoofSection {
   const fr = sectionFrame(parent);
@@ -478,7 +480,7 @@ export function proposeDormer(parent: RoofSection, side: "a" | "b", id: string, 
 
 /**
  * A dormer (or cross gable) as the viewer draws it: its depth ends where its ridge meets the parent's
- * slope – deeper, its roof would lie under the slope. Lower eaves or a flatter pitch shorten it by
+ * slope Ä‚ËĂ˘â€šÂ¬Ă˘â‚¬Ĺ› deeper, its roof would lie under the slope. Lower eaves or a flatter pitch shorten it by
  * themselves, so nothing has to be re-measured after a change.
  */
 export function effectiveDormer(parent: RoofSection, d: RoofSection): RoofSection {
@@ -516,7 +518,7 @@ export function effectiveDormer(parent: RoofSection, d: RoofSection): RoofSectio
 }
 
 /**
- * Where the slope opens under a dormer: only where the dormer's roof lies above the slope – a shape
+ * Where the slope opens under a dormer: only where the dormer's roof lies above the slope Ä‚ËĂ˘â€šÂ¬Ă˘â‚¬Ĺ› a shape
  * that narrows towards the rear (the valleys), cut as strips across the dormer's depth, each in the
  * parent's frame. The slope stays where it rises above the dormer's roof.
  */
@@ -620,7 +622,7 @@ export function sectionOverhang(b: Building, s: RoofSection, overhang: number): 
 /** Wall tops below a rectangle: the highest floor with a room under its middle (null = none). */
 export function wallTopUnder(b: Building, x0: number, z0: number, x1: number, z1: number): number | null {
   // not the centre alone: an upper floor with a stairwell or a hall cut out in the middle would leave
-  // the roof on the ground floor (#166) – the highest floor any of nine points of the rectangle falls on
+  // the roof on the ground floor (#166) Ä‚ËĂ˘â€šÂ¬Ă˘â‚¬Ĺ› the highest floor any of nine points of the rectangle falls on
   const pts: Vec2[] = [];
   for (const u of [0.2, 0.5, 0.8]) for (const v of [0.2, 0.5, 0.8]) pts.push([x0 + (x1 - x0) * u, z0 + (z1 - z0) * v]);
   const tops = b.floors.filter((f) => f.rooms.some((r) => r.points.length >= 3 && pts.some((p) => pointInPolygon(p, r.points)))).map((f) => f.elevation + f.height);
@@ -707,7 +709,7 @@ export function roofSectionsFromRooms(b: Building, makeId: (i: number) => string
 
 /**
  * The floor a roof part rides with when the floors are pulled apart: the highest floor with rooms under its
- * sections (between the floor it sits on and its ridge) – a loft under the same slopes, not only the floor
+ * sections (between the floor it sits on and its ridge) Ä‚ËĂ˘â€šÂ¬Ă˘â‚¬Ĺ› a loft under the same slopes, not only the floor
  * the roof stands on (#202). Dormers ride with their main roof, as they sit in its slope (D207).
  */
 export function roofRider(b: Building, floor: Building["floors"][number], sectionIds: readonly string[]): string {
@@ -725,4 +727,202 @@ export function roofRider(b: Building, floor: Building["floors"][number], sectio
     );
   const riders = b.floors.filter((f) => f.elevation >= floor.elevation && f.elevation < top - 0.3 && under(f)).sort((p, q) => q.elevation - p.elevation);
   return riders[0]?.id ?? floor.id;
+}
+/**
+ * Clip a 3D roof polygon against a line in its local UV plane.
+ * The height coordinate is interpolated at intersections.
+ */
+export function clipRoofPlane(
+  poly: Q[],
+  a: number,
+  b: number,
+  c: number,
+  keepPositive = true,
+): Q[] {
+  const distance = (p: Q) => a * p[0] + b * p[1] + c;
+  const inside = (d: number) =>
+    keepPositive ? d >= -1e-9 : d <= 1e-9;
+
+  const out: Q[] = [];
+
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i];
+    const q = poly[(i + 1) % poly.length];
+
+    const dp = distance(p);
+    const dq = distance(q);
+    const pi = inside(dp);
+    const qi = inside(dq);
+
+    if (pi) out.push(p);
+
+    if (pi !== qi) {
+      const t = dp / (dp - dq);
+      out.push([
+        p[0] + (q[0] - p[0]) * t,
+        p[1] + (q[1] - p[1]) * t,
+        p[2] + (q[2] - p[2]) * t,
+      ]);
+    }
+  }
+
+  return out;
+}
+/** Height of a roof plane: y = a*u + b*v + c. */
+export interface RoofPlane {
+  a: number;
+  b: number;
+  c: number;
+}
+
+/** Determine the height equation of a non-vertical triangular roof face. */
+export function roofPlaneFromTriangle(
+  p: Q,
+  q: Q,
+  r: Q,
+): RoofPlane | null {
+  const du1 = q[0] - p[0];
+  const dv1 = q[1] - p[1];
+  const du2 = r[0] - p[0];
+  const dv2 = r[1] - p[1];
+
+  const determinant = du1 * dv2 - du2 * dv1;
+  if (Math.abs(determinant) < 1e-10) return null;
+
+  const dy1 = q[2] - p[2];
+  const dy2 = r[2] - p[2];
+
+  const a = (dy1 * dv2 - dy2 * dv1) / determinant;
+  const b = (du1 * dy2 - du2 * dy1) / determinant;
+  const c = p[2] - a * p[0] - b * p[1];
+
+  return { a, b, c };
+}
+
+/** Intersection line of two roof planes in the UV plane. */
+export function roofPlaneIntersection(
+  first: RoofPlane,
+  second: RoofPlane,
+): { a: number; b: number; c: number } | null {
+  const a = first.a - second.a;
+  const b = first.b - second.b;
+  const c = first.c - second.c;
+
+  if (Math.hypot(a, b) < 1e-10) return null;
+
+  return { a, b, c };
+}
+/** Convert a roof face from section-local UV coordinates to house XZ coordinates. */
+export function roofFaceToWorld(
+  section: Pick<RoofSection, "x0" | "z0" | "x1" | "z1" | "axis" | "flip">,
+  face: Q[],
+): Q[] {
+  const frame = sectionFrame(section);
+  return face.map(([u, v, y]) => {
+    const [x, z] = frame.at(u, v);
+    return [x, z, y] as Q;
+  });
+}
+/** Calculate the intersection line of two roof faces in house coordinates. */
+export function roofFaceIntersection(
+  first: Q[],
+  second: Q[],
+): { a: number; b: number; c: number } | null {
+  if (first.length < 3 || second.length < 3) return null;
+
+  const planeA = roofPlaneFromTriangle(first[0], first[1], first[2]);
+  const planeB = roofPlaneFromTriangle(second[0], second[1], second[2]);
+
+  if (!planeA || !planeB) return null;
+
+  return roofPlaneIntersection(planeA, planeB);
+}
+/** Intersection segment of a line with a convex roof face in house coordinates. */
+export function roofLineSegment(
+  face: Q[],
+  line: { a: number; b: number; c: number },
+): [Q, Q] | null {
+  const hits: Q[] = [];
+  const eps = 1e-8;
+
+  for (let i = 0; i < face.length; i++) {
+    const p = face[i];
+    const q = face[(i + 1) % face.length];
+    const dp = line.a * p[0] + line.b * p[1] + line.c;
+    const dq = line.a * q[0] + line.b * q[1] + line.c;
+
+    if (Math.abs(dp) < eps) hits.push(p);
+
+    if (dp * dq < -eps * eps) {
+      const t = dp / (dp - dq);
+      hits.push([
+        p[0] + (q[0] - p[0]) * t,
+        p[1] + (q[1] - p[1]) * t,
+        p[2] + (q[2] - p[2]) * t,
+      ]);
+    }
+  }
+
+  const unique = hits.filter((p, i) =>
+    hits.findIndex(q =>
+      Math.hypot(p[0] - q[0], p[1] - q[1]) < eps
+    ) === i
+  );
+
+  if (unique.length < 2) return null;
+
+  let best: [Q, Q] | null = null;
+  let maxDistance = 0;
+
+  for (let i = 0; i < unique.length; i++) {
+    for (let j = i + 1; j < unique.length; j++) {
+      const d = Math.hypot(
+        unique[i][0] - unique[j][0],
+        unique[i][1] - unique[j][1],
+      );
+      if (d > maxDistance) {
+        maxDistance = d;
+        best = [unique[i], unique[j]];
+      }
+    }
+  }
+
+  return best;
+}
+/** Shared intersection segment of two convex roof faces in house coordinates. */
+export function roofFaceIntersectionSegment(
+  first: Q[],
+  second: Q[],
+): [Q, Q] | null {
+  const line = roofFaceIntersection(first, second);
+  if (!line || ![line.a, line.b, line.c].every(Number.isFinite)) return null;
+
+  const segmentA = roofLineSegment(first, line);
+  const segmentB = roofLineSegment(second, line);
+  if (!segmentA || !segmentB) return null;
+
+  const direction: [number, number] = [-line.b, line.a];
+  const parameter = (p: Q) => p[0] * direction[0] + p[1] * direction[1];
+
+  const a = [parameter(segmentA[0]), parameter(segmentA[1])].sort((x, y) => x - y);
+  const b = [parameter(segmentB[0]), parameter(segmentB[1])].sort((x, y) => x - y);
+
+  const start = Math.max(a[0], b[0]);
+  const end = Math.min(a[1], b[1]);
+  if (end - start < 1e-8) return null;
+
+  const interpolate = (t: number): Q => {
+    const p = segmentA[0];
+    const q = segmentA[1];
+    const t0 = parameter(p);
+    const t1 = parameter(q);
+    const f = (t - t0) / (t1 - t0);
+    return [
+      p[0] + (q[0] - p[0]) * f,
+      p[1] + (q[1] - p[1]) * f,
+      p[2] + (q[2] - p[2]) * f,
+    ];
+  };
+
+  return [interpolate(start), interpolate(end)];
 }
