@@ -10,3 +10,5 @@ preview/screenshots/
 private/
 *.pem
 *.key
+
+/preview/my-house.json

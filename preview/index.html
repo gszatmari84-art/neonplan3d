@@ -52,6 +52,12 @@
         updates: params.has("shop") ? [{ id: "mastershort.kitchen", name: "Küche", release: 2, added: 10, at: Date.now() / 1000 - 600 }] : [],
       };
       let building = params.has("empty") ? { version: 1, floors: [], settings: { wall_exterior: 0.24, wall_interior: 0.12, grid: 0.05 } } : DEMO_BUILDING;
+      if (params.has("house")) {
+        const response = await fetch("./my-house.json");
+        if (!response.ok) throw new Error("House JSON load failed");
+        const exported = await response.json();
+        building = exported.building;
+      }
       let revision = 1;
       // off like on a fresh installation; the screenshots switch it on through the editor
       const diag = { enabled: false };
