@@ -493,6 +493,49 @@ export function pushSection(
       }
     }
     ridges = geom.ridges;
+
+    // Valley edges of the six-sided bay roof, in world X/Z coordinates.
+    if (s.id === "roof_polygonhip_prototype") {
+      const valleys: [[number, number, number], [number, number, number]][] = [
+        [[3.85, 7.65, 4.02], [7.5, 3.51461503369809, 7.49]],
+        [[7.5, 3.51461503369809, 7.49], [11.15, 7.65, 4.02]],
+      ];
+      const local = (x: number, z: number): [number, number] =>
+        s.axis === "x"
+          ? [x, s.flip ? Math.max(s.z0, s.z1) - z : z - Math.min(s.z0, s.z1)]
+          : [z, s.flip ? Math.max(s.x0, s.x1) - x : x - Math.min(s.x0, s.x1)];
+
+      for (const [[x0, z0, y0], [x1, z1, y1]] of valleys) {
+        const a = local(x0, z0);
+        const b = local(x1, z1);
+        lines.seg(P(a[0], a[1], y0 + 0.006), P(b[0], b[1], y1 + 0.006), RIDGE);
+      }
+    }
+    // Clip side-roof ridge segments at their valley boundary.
+    if (s.id === "roof_topfhghm" || s.id === "roof_1wpoq01p") {
+      const valley = valleyRimClips[0];
+      const signed = (p: Q): number => {
+        const [x, z] = fr.at(p[0], p[1]);
+        return valley.a * x + valley.b * z + valley.c;
+      };
+
+      ridges = ridges.flatMap(([a, b]): [Q, Q][] => {
+        const d0 = signed(a);
+        const d1 = signed(b);
+
+        if (d0 < -1e-8 && d1 < -1e-8) return [];
+        if (d0 >= -1e-8 && d1 >= -1e-8) return [[a, b]];
+
+        const t = d0 / (d0 - d1);
+        const cut: Q = [
+          a[0] + t * (b[0] - a[0]),
+          a[1] + t * (b[1] - a[1]),
+          a[2] + t * (b[2] - a[2]),
+        ];
+
+        return d0 < 0 ? [[cut, b]] : [[a, cut]];
+      });
+    }
     gableProfile = geom.gable;
   }
   // a canopy has thin see-through panels; a closed roof its tiles with their thickness below
