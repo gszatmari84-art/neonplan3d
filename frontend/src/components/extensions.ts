@@ -714,7 +714,7 @@ export class Extensions extends LitElement {
     return html`<div class="fp3d-review" role="dialog" aria-modal="true">
       <h4>${this.t("module_review_title", { name: packName(review.pack, this.hass?.language ?? "de") })}</h4>
       ${d
-        ? html`<p class="fp3d-sub">${this.t("module_review_meta", { publisher: d.publisher, release: d.release, kb: Math.max(1, Math.round(d.code.length / 1024)), sha: d.sha.slice(0, 12) })}</p>
+        ? html`<p class="fp3d-sub">${this.t("module_review_meta", { publisher: d.publisher, release: d.release, kb: Math.max(1, Math.round(d.code.length / 1024)), sha: d.sha })}</p>
             <p class="fp3d-sub">${this.t("module_review_note")}</p>
             <pre class="fp3d-review-code">${d.code}</pre>`
         : review.busy
@@ -1053,6 +1053,9 @@ export class Extensions extends LitElement {
       }
       .fp3d-review h4 {
         margin: 0;
+      }
+      .fp3d-review .fp3d-sub {
+        overflow-wrap: anywhere;
       }
       .fp3d-review-code {
         max-height: 50vh;

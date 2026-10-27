@@ -12,3 +12,8 @@ private/
 *.key
 
 /preview/my-house.json
+
+# local test harnesses (screenshots, probes) - never in the repository
+frontend/_*.mjs
+frontend/_*.mts
+frontend/_*.ts

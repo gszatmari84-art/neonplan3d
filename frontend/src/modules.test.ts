@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { clearModules, loadedModules, MODULE_API, moduleVoice, moduleWaits, registerModule, syncModules, type ModuleHost } from "./modules.ts";
+import { clearModules, loadedModules, MODULE_API, moduleFurnitureFields, moduleSettings, moduleVoice, moduleWaits, registerModule, syncModules, type ModuleHost } from "./modules.ts";
 
 const host = {
   api: MODULE_API,
@@ -41,4 +41,17 @@ test("only module code an admin approved is fetched and run", async () => {
   assert.equal(moduleWaits({ module: { approved: true }, pending: { release: 2 } }), true);
   assert.equal(moduleWaits({ module: { approved: true } }), false);
   assert.equal(moduleWaits({}), false);
+});
+
+test("a module's fields on a piece of furniture and its own settings; a failing module adds none", () => {
+  clearModules();
+  registerModule({ api: MODULE_API, id: "broken", furnitureFields: () => { throw new Error("boom"); }, settings: () => { throw new Error("boom"); } });
+  registerModule({ api: MODULE_API, id: "setup", furnitureFields: (_h, f) => (f.type === "radiator" ? [{ kind: "heading", text: "Heizkörper" }] : []), settings: () => [{ kind: "text", text: "Demo" }] });
+  const radiator = { id: "r1", type: "radiator", x: 0, z: 0, rotation: 0, w: 1, d: 0.1, h: 0.6, variant: null };
+  assert.deepEqual(moduleFurnitureFields(host, radiator), [{ kind: "heading", text: "Heizkörper" }]);
+  assert.deepEqual(moduleFurnitureFields(host, { ...radiator, type: "sofa" }), []);
+  assert.deepEqual(moduleSettings("setup", host), [{ kind: "text", text: "Demo" }]);
+  assert.deepEqual(moduleSettings("broken", host), []);
+  assert.deepEqual(moduleSettings("missing", host), []);
+  clearModules();
 });

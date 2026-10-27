@@ -29,6 +29,7 @@ jobs:
           mkdir -p _site/preview _site/custom_components/neonplan3d
           cp site/index.html _site/
           mkdir -p _site/import && cp site/import/index.html site/import/neonplan-import.js _site/import/
+          mkdir -p _site/keys && cp site/keys/index.html site/keys/manifest.json site/keys/*.bin _site/keys/
           cp preview/index.html preview/*.js _site/preview/
           cp -r custom_components/neonplan3d/frontend _site/custom_components/neonplan3d/
           touch _site/.nojekyll

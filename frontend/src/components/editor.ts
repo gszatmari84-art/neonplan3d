@@ -5,7 +5,7 @@ import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { ref } from "lit/directives/ref.js";
 import { fetchImage, importPack, listHistory, restoreSnapshot, storeImage, takeSnapshot, type Snapshot, getVoiceSettings, setVoiceSentences, type SentenceMode } from "../api.ts";
 import { download, exportFile, parseExport } from "../transfer.ts";
-import { carEntities, type CarEntities, areaEntities, autoPlace, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, furnitureEntities, groupByDevice, hasScreen, isMediaFurniture, isPlaceable, isRoomClimateSensor, kindOf, openingEntities, otherAreaEntities, pictureRuleMatches, roomClimateSensors, unassignedEntities, windowPosition, type ClimateKey } from "../devices.ts";
+import { carEntities, type CarEntities, areaEntities, autoPlace, hiddenInHa, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, furnitureEntities, groupByDevice, hasScreen, isMediaFurniture, isPlaceable, isRoomClimateSensor, kindOf, openingEntities, otherAreaEntities, pictureRuleMatches, roomClimateSensors, unassignedEntities, windowPosition, type ClimateKey } from "../devices.ts";
 import { furnitureSymbol } from "./furniture2d.ts";
 import { clipConvex, netRoomArea } from "../geometry/area.ts";
 import { areaText, formatImperial, lengthText, lengthUnit, parseLength, unitLabel, type LengthUnit } from "../units.ts";
@@ -18,6 +18,7 @@ import { holeInRoom } from "../geometry/holes.ts";
 import { weatherEntity, isRainSource } from "../weather.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
 import { hasFeature, labOn, manualUrl, released, shopUrl, UNRELEASED } from "../features.ts";
+import { loadLocate } from "../load-locate.ts";
 import { isBeta, supporterUrl } from "../beta.ts";
 import { BIN_SHAPES, BIN_SIZE, binColors, binShape, householdCountry, isPackPlant, MAILBOX_SHAPES, MAILBOX_SIZE, mailboxShape, WASTE_KINDS, wasteColors } from "../household.ts";
 import { cameraMotionSensors, detectionKind } from "../markers.ts";
@@ -25,8 +26,8 @@ import { backdropImage } from "../backdrop.ts";
 import { screenName, setScreenName, setVoiceHere, setVoicePipeline, voiceOnHere, voicePipeline } from "../load-voice.ts";
 import { doorbellCamera, doorbellEntities, directorOnHere, HOLD_DEFAULT, HOLD_MAX, HOLD_MIN, setDirectorHere, type DirectorSettings } from "../director.ts";
 import { deviceSensors, energySummary, flowSegments, gridPoint, powerSensorFor, proposeEnergySensors, type EnergyPrefs, type FlowSegment, proposeMeters } from "../energy.ts";
-import { CLIMATE_ATTRS, isStatusSensor, robotRoomSensor, TOGGLE_KINDS } from "../devices.ts";
-import { sectionFloor, dormerParent, effectiveDormer, proposeDormer, sectionGeometry, floorOutline, polygonBox, headroomLines, ridgeHeight, sectionCutsBelow, roofSectionsFromRooms, sectionFrame, wallTopUnder } from "../roof-sections.ts";
+import { CLIMATE_ATTRS, isPulseDrive, isStatusSensor, robotRoomSensor, TOGGLE_KINDS } from "../devices.ts";
+import { activeSections, sectionFloor, dormerParent, effectiveDormer, proposeDormer, sectionGeometry, floorOutline, polygonBox, headroomLines, ridgeHeight, sectionAbove, sectionCutsBelow, roofSectionsFromRooms, sectionFrame, wallTopUnder } from "../roof-sections.ts";
 import { bestFace, clampField, faceAt, faceCompass, fieldFace, fieldModules, GROUND, moveField, pointOnFace, proposeField, proposeGroundField, proposeWindow, proposeWallField, roofFaces, rowCounts, turnGroundField, fieldCenter, wallFaces, windowAsField, windowCorners, onFace, onField, rayOnFace, type RoofFace } from "../solar.ts";
 import type { SurfaceGrab, SurfaceRay } from "../viewer/viewer3d.ts";
 import { storedImageIds } from "../transfer.ts";
@@ -48,10 +49,10 @@ import { type CarLinks, type Background, OUTDOOR_TOP, sidelightLayout, DEFAULT_W
   type ValvePosition,
 } from "../model.ts";
 import { furnishRoom, PACKAGES, type PackageId } from "../packages.ts";
-import { generateWalls, locateOpening, openingHost, pointOnRoomEdge, type Wall } from "../geometry/walls.ts";
+import { edgeReach, generateWalls, locateOpening, openingHost, pointOnRoomEdge, type Wall } from "../geometry/walls.ts";
 import { formatNumber, languageReady, loadLanguage, translate, type I18nKey } from "../i18n.ts";
 import { iconPath } from "../icons.ts";
-import { moduleAreaFields, moduleHelp, modulePipeRules, moduleWaits, syncModules, type ModuleField, type ModuleHost, type PipeRules } from "../modules.ts";
+import { moduleAreaFields, moduleFurnitureFields, moduleHelp, modulePipeRules, moduleSettings, moduleWaits, syncModules, type ModuleField, type ModuleHost, type PipeRules } from "../modules.ts";
 import { pipePlanner } from "../pipe-planner.ts";
 import {
   bounds,
@@ -107,6 +108,8 @@ import {
   type LampMount,
   type RoofSection,
   type RoofShape,
+  type RoofEnd,
+  ROOF_ENDS,
   type SolarField,
   type SolarString,
   type RoofWindow,
@@ -123,14 +126,17 @@ import {
   type Vec2,
   DOOR_STYLES,
   WINDOW_STYLES,
+  SILL_BOARDS,
   openingStyle,
   isFrontDoor,
   type OpeningStyle,
+  type SillBoard,
   type ScreenPicture,
   STAIR_TYPES,
   setTerrain,
-  terrainAt,
+  clearFirstState,
 } from "../model.ts";
+import { windowGetsWell } from "../geometry/wells.ts";
 import { controls, tokens } from "../styles.ts";
 import "./entity-picker.ts";
 import type { HassArea, HassFloor, HomeAssistant } from "../types.ts";
@@ -142,7 +148,7 @@ import { basicTypes, buildIndex, roomKindOf, type LibraryEntry } from "../librar
 import { packsVersion as libPacksVersion } from "../packs.ts";
 import type { WallMode } from "../viewer/viewer3d.ts";
 import { furnitureName } from "../furniture-names.ts";
-import { furnitureSize, isElectric, isPackType, isRobotVacuum, mountBase, packDisplay, packItem, packItemName, packMotion, packName, packType, setPacks, type FurniturePack } from "../packs.ts";
+import { furnitureSize, isElectric, isPackHeater, isPackType, isRobotVacuum, mountBase, packDisplay, packItem, packItemName, packMotion, packName, packType, setPacks, type FurniturePack } from "../packs.ts";
 
 /** Items that can be fixed against moving. */
 type FixKind = "room" | "opening" | "furniture" | "device" | "wall" | "outdoor";
@@ -198,7 +204,7 @@ const EDIT_DRAGS = new Set(["vertex", "room", "device", "opening", "furniture", 
 const HISTORY = 100;
 
 /** Topics of the ⚙ settings menu (everything that belongs to the whole plan). */
-type SettingsTopic = "house" | "weather" | "director" | "voice" | "favorites" | "backdrop" | "terrain" | "backup" | "modules";
+type SettingsTopic = "house" | "weather" | "director" | "voice" | "locate" | "favorites" | "backdrop" | "terrain" | "backup" | "modules" | "diagnostics";
 
 /** Wall view side bar: what stands or hangs at a wall, by kind. */
 const WALL_CATS: Record<string, string[]> = {
@@ -316,6 +322,12 @@ const ARROWS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRigh
 // furniture without a top to light: no "State from" box
 const NO_STATE_TYPES = new Set(["parking", "stairwell", "rug", "grid_point", "waste_bin", "mailbox", "wall_switch", "wall_socket", "wifi_ap", "water_heater"]);
 
+/** A gas or water meter from a pack (its reading in m³ or litres, no power): family "meter" tagged gas or water. */
+function volumeMeter(type: string): boolean {
+  const item = packItem(type);
+  return item?.family === "meter" && (item.tags ?? []).some((t) => /^(gas|water|wasser)$/i.test(t));
+}
+
 export class Fp3dEditor extends LitElement {
   static properties = {
     _shiftX: { state: true },
@@ -392,6 +404,7 @@ export class Fp3dEditor extends LitElement {
     _ctx: { state: true },
     _fixedHint: { state: true },
     _phoneHint: { state: true },
+    _diagInvite: { state: true },
     _floorMenu: { state: true },
     _openingPreset: { state: true },
     _measureLen: { state: true },
@@ -593,6 +606,9 @@ export class Fp3dEditor extends LitElement {
   private declare _fixedHint: boolean;
   /** The one-time "draw on a PC or tablet" hint on phones (shown by CSS on narrow screens only). */
   private declare _phoneHint: boolean;
+  /** A one-time invitation for admins to switch on the usage reports (while they are off and it was not closed). */
+  private declare _diagInvite: boolean;
+  private diagInviteChecked = false;
   private fixedPan = false;
   /** Frame the 3D half again after the next render (the roof tool shows the whole house). */
   private reframe3d = false;
@@ -723,6 +739,7 @@ export class Fp3dEditor extends LitElement {
     this._floorMenu = false;
     this._openingPreset = "door";
     this._phoneHint = true;
+    this._diagInvite = false;
     try {
       this._phoneHint = localStorage.getItem("neonplan3d.phoneHint") !== "0";
     } catch {
@@ -1169,7 +1186,31 @@ export class Fp3dEditor extends LitElement {
     }
   }
 
+  /** Once per page: an admin with the usage reports off (and the invitation never closed) is invited. */
+  private checkDiagInvite(): void {
+    if (this.diagInviteChecked || !this.hass || !this.isAdmin || !released("diagnostics")) return;
+    this.diagInviteChecked = true;
+    try {
+      if (localStorage.getItem("neonplan3d.diagInvite") === "0") return;
+    } catch {
+      return;
+    }
+    void getDiagnostics(this.hass)
+      .then((d) => (this._diagInvite = !d.enabled))
+      .catch(() => undefined);
+  }
+
+  private closeDiagInvite(): void {
+    this._diagInvite = false;
+    try {
+      localStorage.setItem("neonplan3d.diagInvite", "0");
+    } catch {
+      // no storage: gone for this visit
+    }
+  }
+
   protected updated(): void {
+    this.checkDiagInvite();
     // the settings dialog shows its section unfolded (its summary is hidden there)
     if (this._settingsDialog) for (const d of this.renderRoot.querySelectorAll<HTMLDetailsElement>(".fp3d-dialog details")) d.open = true;
     // the item preview is placed in window coordinates; with the 3D view beside the plan an ancestor becomes its
@@ -2934,8 +2975,7 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
       // along the wall: the arrow's share in the wall direction
       const along = (dx * (b[0] - a[0]) + dz * (b[1] - a[1])) / len;
       if (Math.abs(along) < 1e-9) return true;
-      const half = Math.min(o.width, len) / 2;
-      this.updateOpening({ offset: round(Math.min(len - half, Math.max(half, o.offset + along))) });
+      this.updateOpening({ offset: this.clampOffset(host.room, host.edge, o.width, o.offset + along) });
     } else if (this._wallId) {
       const id = this._wallId;
       this.change((_, f) => {
@@ -4262,6 +4302,28 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
               <button aria-pressed=${sec.axis === "x"} ?disabled=${!admin} @click=${() => set({ axis: "x" })}>${this.t("roof_axis_x")}</button>
               <button aria-pressed=${sec.axis === "z"} ?disabled=${!admin} @click=${() => set({ axis: "z" })}>${this.t("roof_axis_z")}</button>
             </div>`}
+        ${sec.shape === "gable" || sec.shape === "hip" || sec.shape === "halfhip"
+          ? html`<div class="fp3d-form" title=${this.t("roof_end_hint")}>
+              ${([0, 1] as const).map((end) => {
+                // the u0 end is the left one (ridge across the plan) or the top one (ridge up and down)
+                const where = this.t(sec.axis === "x" ? (end === 0 ? "roof_side_left" : "roof_side_right") : end === 0 ? "roof_side_top" : "roof_side_bottom");
+                const value = (end === 0 ? sec.end_u0 : sec.end_u1) ?? "";
+                return html`<label class="fp3d-field"
+                  >${this.t("roof_end")} ${where}
+                  <select
+                    ?disabled=${!admin}
+                    @change=${(e: Event) => {
+                      const v = ((e.target as HTMLSelectElement).value || null) as RoofEnd | null;
+                      set(end === 0 ? { end_u0: v } : { end_u1: v });
+                    }}
+                  >
+                    <option value="" ?selected=${value === ""}>${this.t("roof_end_auto")}</option>
+                    ${ROOF_ENDS.map((e) => html`<option value=${e} ?selected=${value === e}>${this.t(e === "gable" ? "roof_end_gable" : `roof_shape_${e}`)}</option>`)}
+                  </select></label
+                >`;
+              })}
+            </div>`
+          : nothing}
         <label class="fp3d-check fp3d-wide" title=${this.t("roof_open_hint")}
           ><input type="checkbox" .checked=${!!sec.open} ?disabled=${!admin} @change=${(e: Event) => set({ open: (e.target as HTMLInputElement).checked })} />
           ${this.t("roof_open")}</label
@@ -4515,8 +4577,22 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
     const t = ((world[0] - a[0]) * (b[0] - a[0]) + (world[1] - a[1]) * (b[1] - a[1])) / len;
     const g = free ? 0.01 : this._doc.settings.grid;
-    const half = Math.min(width, len) / 2;
-    return round(Math.min(len - half, Math.max(half, Math.round(t / g) * g)));
+    return this.clampOffset(room, edge, width, Math.round(t / g) * g);
+  }
+
+  /**
+   * An opening's centre kept on its room edge with the whole opening inside the edge – or reaching on across
+   * a transition without a wall, where the outer wall carries on in line (#624).
+   */
+  private clampOffset(room: Room, edge: number, width: number, offset: number): number {
+    const a = room.points[edge];
+    const b = room.points[(edge + 1) % room.points.length];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const floor = this.floor;
+    const s = this._doc.settings;
+    const [before, after] = floor ? edgeReach(generateWalls(floor.rooms, { exterior: s.wall_exterior, interior: s.wall_interior }, floor.walls ?? []).walls, room, edge) : [0, 0];
+    const half = Math.min(width, len + before + after) / 2;
+    return round(Math.min(len, len + after - half, Math.max(0, half - before, offset)));
   }
 
   /** Add a door or window on the room edge nearest to a screen point. */
@@ -4741,7 +4817,12 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
 
   private updateFurniture(patch: Partial<Furniture>): void {
     const id = this._furnitureId;
-    this.change((_, floor) => Object.assign(floor.furniture.find((f) => f.id === id)!, patch));
+    // a field may report its change after the item was deselected or the floor changed (on blur): then nothing to do
+    if (!id || !this.floor?.furniture.some((f) => f.id === id)) return;
+    this.change((_, floor) => {
+      const item = floor.furniture.find((f) => f.id === id);
+      if (item) Object.assign(item, patch);
+    });
   }
 
   private mirrorFurniture(): void {
@@ -5460,11 +5541,13 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
       { key: "weather", icon: "🌦", label: this.t("settings_weather"), admin: true },
       { key: "director", icon: "🎬", label: this.t("card_director"), admin: true },
       { key: "voice", icon: "🎙", label: this.t("voice"), admin: false },
+      ...(released("locate") ? [{ key: "locate" as const, icon: "📡", label: this.t("locate"), admin: true }] : []),
       { key: "favorites", icon: "⭐", label: this.t("favorites"), admin: true },
       { key: "backdrop", icon: "🖼", label: this.t("backdrop"), admin: true },
       { key: "terrain", icon: "⛰", label: this.t("terrain"), admin: true },
       { key: "backup", icon: "💾", label: this.t("backup"), admin: true },
       { key: "modules", icon: "🧩", label: this.t("settings_modules"), admin: true },
+      ...(released("diagnostics") ? [{ key: "diagnostics" as const, icon: "🛟", label: this.t("diag_menu"), admin: true }] : []),
     ];
     const topics = all.filter((t) => admin || !t.admin);
     const toggle = () => {
@@ -5484,8 +5567,14 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
                     role="menuitem"
                     class="fp3d-menu-item"
                     @click=${() => {
-                      this._settingsDialog = t.key;
                       this._settingsMenu = false;
+                      // locating has its own assistant (a bundle of its own), not a dialog
+                      if (t.key === "locate") {
+                        if (this.hass) void loadLocate().then((m) => m.openLocateSetup(this.hass!, this._doc, () => this.hass, (look) => this.setSettings({ person_look: look === "figure" ? null : look })));
+                        return;
+                      }
+                      this._settingsDialog = t.key;
+                      if (t.key === "diagnostics") void this.loadDiagnostics();
                       // the modules' sentences for the voice list: loaded here as well (the editor is its own bundle), once per opening
                       if (t.key === "voice" && this.hass) void syncModules(this.hass, this.packs ?? []).then(() => this.requestUpdate());
                     }}
@@ -5509,11 +5598,13 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
       weather: this.t("settings_weather"),
       director: this.t("card_director"),
       voice: this.t("voice"),
+      locate: this.t("locate"),
       favorites: this.t("favorites"),
       backdrop: this.t("backdrop"),
       terrain: this.t("terrain"),
       backup: this.t("backup"),
       modules: this.t("settings_modules"),
+      diagnostics: this.t("diag_title"),
     };
     const body =
       topic === "house"
@@ -5532,7 +5623,9 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
                     ? this.renderTerrain()
                     : topic === "backup"
                       ? this.renderBackup()
-                      : this.renderModuleSettings();
+                      : topic === "diagnostics"
+                        ? this.renderDiagnostics(true)
+                        : this.renderModuleSettings();
     return html`<div class="fp3d-dialog-veil" @click=${(e: Event) => e.target === e.currentTarget && close()}>
       <div class="fp3d-dialog" role="dialog" aria-label=${titles[topic]} tabindex="-1" @keydown=${(e: KeyboardEvent) => e.key === "Escape" && close()}>
         <div class="fp3d-dialog-head">
@@ -5557,7 +5650,10 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
               ${p.module && moduleWaits(p)
                 ? html`<p class="fp3d-sub">${this.t(p.module.approved === true ? "module_update_waits" : "module_waits", { from: p.release ?? 1, to: p.pending?.release ?? 1 })} ${this.t("module_waits_where")}</p>`
                 : p.module
-                  ? html`<p class="fp3d-sub">${this.t("module_no_settings")}</p>`
+                  ? (() => {
+                      const own = this.hass ? moduleSettings(p.id, this.editorHost()) : [];
+                      return own.length ? html`<div class="fp3d-form">${this.renderFields(own, false)}</div>` : html`<p class="fp3d-sub">${this.t("module_no_settings")}</p>`;
+                    })()
                   : nothing}
             </div>`,
           )
@@ -5626,6 +5722,24 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
                   >
                     ✕
                   </button>
+                </div>`
+              : nothing}
+            ${this._diagInvite
+              ? html`<div class="fp3d-diag-invite" role="note">
+                  <span><b>🛟 ${this.t("diag_title")}</b> ${this.t("diag_invite")}</span>
+                  <span class="fp3d-diag-invite-buttons">
+                    <button
+                      class="fp3d-btn primary"
+                      @click=${() => {
+                        this.closeDiagInvite();
+                        this._settingsDialog = "diagnostics";
+                        void this.loadDiagnostics();
+                      }}
+                    >
+                      ${this.t("diag_invite_look")}
+                    </button>
+                    <button class="fp3d-btn" @click=${() => this.closeDiagInvite()}>${this.t("diag_invite_later")}</button>
+                  </span>
                 </div>`
               : nothing}
             ${this.houseTool ? html`<div class="fp3d-tool-note">${this.t(this._tool === "energy" ? "energy_only_note" : "roof_only_note")}</div>` : nothing}
@@ -9567,7 +9681,17 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
   /** Fields a module adds to an outdoor area's form (Pool Pro: the pool's entities, the assistant), rendered here. */
   private renderModuleFields(a: OutdoorArea) {
     if (!this.hass) return nothing;
-    const fields = moduleAreaFields(this.editorHost(), a);
+    return this.renderFields(moduleAreaFields(this.editorHost(), a));
+  }
+
+  /** Fields a module adds to a piece of furniture's form (a device's entities, a setup assistant). */
+  private renderModuleFurnitureFields(f: Furniture) {
+    if (!this.hass) return nothing;
+    return this.renderFields(moduleFurnitureFields(this.editorHost(), f));
+  }
+
+  /** A module's fields, drawn like the editor's own. */
+  private renderFields(fields: ModuleField[], wrap = true) {
     if (!fields.length) return nothing;
     const admin = this.isAdmin;
     const field = (f: ModuleField) => {
@@ -9591,6 +9715,7 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
           return html`<button class="fp3d-btn ${f.primary ? "fp3d-primary" : ""} fp3d-wide" ?disabled=${!admin} title=${f.title ?? ""} @click=${() => f.onTap()}>${f.label}</button>`;
       }
     };
+    if (!wrap) return fields.map(field);
     return html`<section>
       <div class="fp3d-form fp3d-links">${fields.map(field)}</div>
     </section>`;
@@ -10130,6 +10255,7 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
     // open over the 3D pane, so the pane keeps its size
     return html`<aside class="fp3d-side fp3d-side-strip"></aside>
       <aside class="fp3d-side fp3d-side-overlay">
+        ${this.renderSideGrip()}
         ${this.renderPinRow(true)}
         ${this.renderSide(floor)}
       </aside>`;
@@ -10272,7 +10398,6 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
       ${this.renderHelpLinks()}
       ${admin && SHOW_PRESENCE ? this.renderPresenceSettings() : nothing}
       ${floor && admin ? this.renderBackgroundForm(floor) : nothing}
-      ${admin && released("diagnostics") ? this.renderDiagnostics() : nothing}
     `;
   }
 
@@ -10612,13 +10737,18 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
     };
     const dc = (id: string) => this.hass?.states[id]?.attributes.device_class as string | undefined;
     const covers = this.entityOptions((id) => id.startsWith("cover."));
+    // a garage door's drive may also be a pulse switch or a button that the opener answers (#677)
+    const garageDrives = garage ? this.entityOptions((id) => id.startsWith("cover.") || isPulseDrive(id)) : covers;
     // sensors with a number for the live position of a blind
     const positions = this.entityOptions((id) => /^(sensor|number|input_number)\./.test(id) && Number.isFinite(Number(this.hass?.states[id]?.state)));
     // plain contacts, and handle sensors with three states (open / tilted / closed)
     // a garage door may also be a switch or toggle helper (a relay that drives the door): on = open, a tap switches it
+    // a contact: a binary sensor of the door/window kind, or one without any class (KNX, enOcean, templates often
+    // have none – they were missing from the list)
+    const isContact = (id: string) => id.startsWith("binary_sensor.") && ["door", "window", "opening", "garage_door", ""].includes(dc(id) ?? "");
     const contacts = this.entityOptions(
       (id) =>
-        (id.startsWith("binary_sensor.") && ["door", "window", "opening", "garage_door"].includes(dc(id) ?? "")) ||
+        isContact(id) ||
         (numberish(id) && windowPosition(this.hass?.states[id]) !== null) ||
         (garage && /^(switch|input_boolean)\./.test(id)),
     );
@@ -10628,7 +10758,7 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
       if (id.startsWith("binary_sensor.")) return typeof st?.attributes.window_state === "string";
       return numberish(id) && (windowPosition(st) !== null || /griff|handle|fenster|window|drehgriff/i.test(`${id} ${entityName(this.hass, id)}`));
     });
-    const plainContacts = this.entityOptions((id) => id.startsWith("binary_sensor.") && ["door", "window", "opening", "garage_door"].includes(dc(id) ?? ""));
+    const plainContacts = this.entityOptions(isContact);
     type Kind = NonNullable<Opening["sensor"]>;
     const leafSensors = (leaf: 1 | 2) => {
       const main = leaf === 1;
@@ -10711,6 +10841,14 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
             </div>`
           : nothing}
         ${garage ? nothing : this.renderStyleSelect(o)}
+        ${window
+          ? html`<label class="fp3d-field fp3d-wide" title=${this.t("sill_board_hint")}
+              >${this.t("sill_board")}
+              <select ?disabled=${!admin} @change=${(e: Event) => this.updateOpening({ sill_board: ((e.target as HTMLSelectElement).value || "auto") as SillBoard })}>
+                ${SILL_BOARDS.map((m) => html`<option value=${m} ?selected=${(o.sill_board ?? "auto") === m}>${this.t(`sill_board_${m}`)}</option>`)}
+              </select></label
+            >`
+          : nothing}
         ${this.renderSidelightFields(o)}
         <label class="fp3d-field fp3d-wide" title=${this.t("opening_mark_hint")}
           >${this.t("opening_mark")}
@@ -10728,10 +10866,11 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
             <option value="right" ?selected=${o.hinge === "right"}>${this.t("hinge_right")}</option>
           </select></label
         >`}
-        ${window || garage || door ? this.entitySelect(this.t(window ? "cover_entity" : "door_cover"), o.cover, autoPick("cover"), covers, (v) => this.updateOpening({ cover: v })) : nothing}
+        ${window || garage || door ? this.entitySelect(this.t(window ? "cover_entity" : "door_cover"), o.cover, autoPick("cover"), garage ? garageDrives : covers, (v) => this.updateOpening({ cover: v })) : nothing}
+        ${garage && isPulseDrive(o.cover) ? html`<p class="fp3d-sub fp3d-wide">${this.t("garage_pulse_hint")}</p>` : nothing}
         ${(window || garage || door) && o.cover !== "none" && (o.cover || autoPick("cover"))
-          ? html`${this.entitySelect(this.t("cover_position_entity"), o.position ?? null, undefined, positions, (v) => this.updateOpening({ position: v === "none" ? null : v }))}
-              ${o.position
+          ? html`${isPulseDrive(o.cover) ? nothing : this.entitySelect(this.t("cover_position_entity"), o.position ?? null, undefined, positions, (v) => this.updateOpening({ position: v === "none" ? null : v }))}
+              ${o.position && !isPulseDrive(o.cover)
                 ? html`<label class="fp3d-check fp3d-wide"
                     ><input
                       type="checkbox"
@@ -10772,7 +10911,7 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
               ${this.t("contact_invert")}</label
             >`
           : nothing}
-        ${o.type === "window" && this.floor && o.sill < terrainAt() - this.floor.elevation - 0.05
+        ${this.floor && windowGetsWell(this._doc, this.floor, o)
           ? html`<label class="fp3d-check fp3d-wide" title=${this.t("well_hint")}
                 ><input type="checkbox" .checked=${o.well !== false} ?disabled=${!admin} @change=${(ev: Event) => this.updateOpening({ well: (ev.target as HTMLInputElement).checked ? undefined : false })} />
                 ${this.t("well")}</label
@@ -10895,6 +11034,7 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
           </div>`
         : nothing}
       ${isElectric(f.type) ? this.renderFurnitureLinks(f) : !NO_STATE_TYPES.has(f.type) ? html`<div class="fp3d-form fp3d-links">${this.renderStateLinks(f)}</div>` : nothing} ${GANG_TYPES.has(f.type) ? this.renderGangsForm(f) : nothing} ${TECH_TYPES.has(f.type) ? this.renderTechForm(f) : nothing} ${f.type === "parking" ? this.renderParkingForm(f) : nothing} ${f.type === "waste_bin" || f.type === "mailbox" ? this.renderHouseholdForm(f) : this.renderHouseholdExtras(f)}
+      ${this.renderModuleFurnitureFields(f)}
       ${f.type.startsWith("pack:mastershort.vehicles:") && this.isAdmin
         ? html`<section>
             <p class="fp3d-sub">${this.t("vehicle_to_spot_hint")}</p>
@@ -11027,8 +11167,8 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
   /** Attic floors: dashed lines where the roof slope leaves 1.5 m and 2 m of headroom, with labels. */
   private renderHeadroom(floor: Floor) {
     const ceiling = floor.elevation + floor.height;
-    const sections = this._doc.settings.roof.sections ?? [];
-    if (!sections.some((s) => sectionCutsBelow(s, ceiling))) return nothing;
+    const sections = activeSections(this._doc);
+    if (!sections.some((s) => sectionCutsBelow(s, ceiling) && sectionAbove(s, floor.elevation))) return nothing;
     const b = { settings: this._doc.settings };
     return svg`${[1.5, 2].map((h) =>
       headroomLines(b, floor.elevation, h).map(([p, q]) => {
@@ -11443,7 +11583,7 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
 
   /** "State from": an entity lights the item's top (two light its halves) – any furniture, a bed with occupancy mats too (#116). */
   private renderStateLinks(f: Furniture) {
-    return html`${this.entitySelect(this.t("furn_state_entity"), f.state_entity ?? null, undefined, this.entityOptions((id) => /^(binary_sensor|switch|input_boolean|light|fan|person|device_tracker|sensor)\./.test(id)), (v) => this.updateFurniture({ state_entity: v === "none" ? null : v }))}
+    return html`${this.entitySelect(this.t("furn_state_entity"), f.state_entity ?? null, undefined, this.entityOptions((id) => /^(binary_sensor|switch|input_boolean|light|fan|person|device_tracker|sensor)\./.test(id)), (v) => this.updateFurniture(clearFirstState(f, v)))}
               ${f.state_entity && f.state_entity !== "none"
                 ? html`${this.entitySelect(this.t("furn_state_entity2"), f.state_entity2 ?? null, undefined, this.entityOptions((id) => /^(binary_sensor|switch|input_boolean|light|fan|person|device_tracker|sensor)\./.test(id)), (v) => this.updateFurniture({ state_entity2: v === "none" ? null : v }))}
                     ${f.state_entity2 && f.state_entity2 !== "none"
@@ -11522,7 +11662,22 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
                   @change=${(e: Event) => this.updateFurniture({ bin_match: (e.target as HTMLInputElement).value.trim() || null })} /></label>
               ${this.num(this.t("bin_from"), this._doc.settings.household?.bin_from ?? 14, (v) => this.setHousehold({ bin_from: Math.max(0, Math.min(24, v)) }), 0.5)}
               ${this.num(this.t("bin_until"), this._doc.settings.household?.bin_until ?? 12, (v) => this.setHousehold({ bin_until: Math.max(0, Math.min(24, v)) }), 0.5)}
-              <p class="fp3d-sub fp3d-wide">${this.t("bin_hint")}</p>`
+              <p class="fp3d-sub fp3d-wide">${this.t("bin_hint")}</p>
+              ${this.entitySelect(this.t("bin_out"), f.bin_out ?? null, undefined, this.entityOptions((id) => /^(input_boolean|switch|binary_sensor)\./.test(id)), (v) => this.updateFurniture({ bin_out: v === "none" ? null : v }))}
+              <p class="fp3d-sub fp3d-wide">${this.t("bin_out_hint")}</p>
+              <label class="fp3d-check fp3d-wide"
+                ><input type="checkbox" .checked=${!!this._doc.settings.household?.bin_next_only} ?disabled=${!admin} @change=${(e: Event) => this.setHousehold({ bin_next_only: (e.target as HTMLInputElement).checked || null })} />
+                ${this.t("bin_next_only")}</label
+              >
+              <label class="fp3d-field"
+                >${this.t("bin_days")}
+                <input type="number" inputmode="numeric" min="0" max="60" step="1" placeholder=${this.t("bin_days_always")} .value=${this._doc.settings.household?.bin_days == null ? "" : String(this._doc.settings.household.bin_days)} ?disabled=${!admin}
+                  @change=${(e: Event) => {
+                    const v = parseInt((e.target as HTMLInputElement).value, 10);
+                    this.setHousehold({ bin_days: Number.isFinite(v) ? Math.max(0, Math.min(60, v)) : null });
+                  }}
+              /></label>
+              <p class="fp3d-sub fp3d-wide">${this.t("bin_tags_hint")}</p>`
           : teaser}
       </div>`;
     }
@@ -11585,6 +11740,10 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
       ${electric
         ? html`${this.entitySelect(this.t("hh_service_entity"), f.service ?? null, undefined, services, (v) => this.updateFurniture({ service: ref(v) }))}
             ${f.service && f.service !== "none" ? this.num(this.t("hh_service_min"), f.service_min ?? 10, (v) => this.updateFurniture({ service_min: Math.max(0, v) }), 1) : nothing}
+            ${(f.service && f.service !== "none") || (f.service2 && f.service2 !== "none")
+              ? this.entitySelect(this.t("hh_service2_entity"), f.service2 ?? null, undefined, services, (v) => this.updateFurniture({ service2: ref(v) }))
+              : nothing}
+            ${f.service2 && f.service2 !== "none" ? this.num(this.t("hh_service2_min"), f.service2_min ?? 10, (v) => this.updateFurniture({ service2_min: Math.max(0, v) }), 1) : nothing}
             <p class="fp3d-sub fp3d-wide">${this.t("hh_service_hint")}</p>`
         : nothing}
     </div>`;
@@ -11762,6 +11921,8 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
                 // (a robot vacuum from a pack, e.g. the one with its dock, follows its vacuum entity; a motorised
                 // curtain its cover, #286)
                 /^(switch|media_player|fan|input_boolean|climate|vacuum|cover)\./.test(id) ||
+                // a pack's heat pump indoor unit, boiler or buffer tank: its water_heater entity (#645)
+                (isPackHeater(f.type) && id.startsWith("water_heater.")) ||
                 isStatusSensor(hass.states[id]) ||
                 // alarms that report as binary sensors (binary_sensor.…_smoke, #490); a smoke detector takes any
                 (id.startsWith("binary_sensor.") && (f.type.endsWith("smoke_detector") || ALARM_CLASSES.has(String(hass.states[id]?.attributes.device_class ?? "")))),
@@ -11801,7 +11962,21 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
                     <p class="fp3d-sub fp3d-wide">${this.t("furn_only_color_hint")}</p>`
                 : nothing}`
           : nothing}
-        ${lamp || f.type === "grid_point"
+        ${volumeMeter(f.type)
+          ? // a gas or water meter (#730): its reading in m³ or litres stands at the symbol, it draws no power
+            html`${this.entitySelect(
+                this.t("furn_meter_reading"),
+                f.extra ?? null,
+                undefined,
+                this.entityOptions(
+                  (id) =>
+                    id.startsWith("sensor.") &&
+                    (["gas", "water", "volume"].includes(String(hass.states[id]?.attributes.device_class ?? "")) || /^(m³|m3|L|l|ft³|gal|CCF)$/.test(String(hass.states[id]?.attributes.unit_of_measurement ?? ""))),
+                ),
+                (v) => this.updateFurniture({ extra: v === "none" ? null : v }),
+              )}`
+          : nothing}
+        ${lamp || f.type === "grid_point" || volumeMeter(f.type)
           ? nothing
           : this.entitySelect(
               this.t(f.type === "meter" ? "energy_grid" : f.type === "inverter" ? "energy_solar_sensor" : f.type === "home_battery" ? "energy_battery_sensor" : "furn_power"),
@@ -11880,7 +12055,7 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
             )}
           </div>`
         : nothing}
-      ${!lamp
+      ${!lamp && !volumeMeter(f.type)
         ? this.entitySelect(this.t("furn_extra"), f.extra ?? null, undefined, this.entityOptions((id) => id.startsWith("sensor.")), (v) => this.updateFurniture({ extra: v === "none" ? null : v }))
         : nothing}
       ${!lamp || f.entity
@@ -12369,12 +12544,14 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
     const admin = this.isAdmin;
     const hass = this.hass;
     const areaName = room.area_id ? hass?.areas?.[room.area_id]?.name : undefined;
-    const ids = hass ? areaEntities(hass, room.area_id).filter((id) => isPlaceable(kindOf(id))) : [];
+    const area = hass ? areaEntities(hass, room.area_id).filter((id) => isPlaceable(kindOf(id))) : [];
     // placed as a device, or as a lamp with this light
     const placedHere = new Set([
       ...(this.floor?.placements.filter((pl) => pointInPolygon([pl.x, pl.z], room.points)).map((pl) => pl.entity_id) ?? []),
       ...(this.floor?.furniture.filter((m) => isLamp(m.type) && m.entity && pointInPolygon([m.x, m.z], room.points)).map((m) => m.entity!) ?? []),
     ]);
+    // placed before it was hidden in Home Assistant: it stays in 3D, so it stays in the list too – to remove or hide it (#645)
+    const ids = hass ? [...area, ...[...placedHere].filter((id) => !area.includes(id) && hiddenInHa(hass, id) && isPlaceable(kindOf(id)))] : area;
     const groups = hass ? groupByDevice(hass, ids) : [];
     // the automatic placement only takes each device's main entity
     const unplacedMain = groups.map((g) => g.primary).filter((id) => !placedHere.has(id));
@@ -12496,7 +12673,7 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
                         ${open ? this.t("devices_less") : this.t("devices_more", { n: g.others.length })}
                       </button>`
                     : nothing}
-                  ${open ? (q ? others : g.others).map((id) => row(id, false, areaName, true)) : nothing}`;
+                  ${open ? this.renderDeviceOthers(q ? others : g.others, (id) => row(id, false, areaName, true), hidden, admin) : nothing}`;
                 })}
               </div>
               ${admin && unplacedMain.length > 1
@@ -12504,6 +12681,30 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
                 : nothing}
               <p class="fp3d-sub">${this.t("devices_hint")}</p>`}
     </section>`;
+  }
+
+  /**
+   * The further entities of an unfolded device: an LED strip from Govee2MQTT brings hundreds of segment lights
+   * (#645), so the list stops after a few dozen (the search narrows it) and one button hides or shows them all.
+   */
+  private renderDeviceOthers(ids: string[], row: (id: string) => unknown, hidden: Set<string>, admin: boolean) {
+    const LIMIT = 40;
+    const allHidden = ids.every((id) => hidden.has(id));
+    const toggleAll = () => {
+      const set = new Set(hidden);
+      for (const id of ids) {
+        if (allHidden) set.delete(id);
+        else set.add(id);
+      }
+      this.updateRoom({ hidden: [...set] });
+    };
+    return html`${admin && ids.length >= 5
+        ? html`<button class="fp3d-link fp3d-dev-all" @click=${toggleAll}>
+            ${this.t(allHidden ? "devices_show_all" : "devices_hide_all", { n: ids.length })}
+          </button>`
+        : nothing}
+      ${ids.slice(0, LIMIT).map(row)}
+      ${ids.length > LIMIT ? html`<p class="fp3d-sub">${this.t("devices_narrow", { n: ids.length - LIMIT })}</p>` : nothing}`;
   }
 
   /** Devices from other areas or without an area, for the chosen source (computed only when shown). */
@@ -12652,11 +12853,13 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
     this._diagBusy = false;
   }
 
-  private renderDiagnostics() {
+  /** `open`: shown in its own settings dialog (open from the start). */
+  private renderDiagnostics(open = false) {
     const d = this._diag;
     const on = d !== null && d !== "error" && d.enabled;
     return html`<details
       class="fp3d-section"
+      ?open=${open}
       @toggle=${(e: Event) => {
         if ((e.target as HTMLDetailsElement).open) void this.loadDiagnostics();
       }}
@@ -13100,7 +13303,7 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
         top: 0;
         right: 0;
         bottom: 0;
-        width: min(340px, 60%);
+        width: min(var(--fp3d-side-w, 340px), 60%);
         /* open over the 3D pane: above the toolbar too, so its buttons never sit on the sidebar's */
         z-index: 30;
         box-shadow: -12px 0 32px rgba(0, 0, 0, 0.45);
@@ -13512,7 +13715,6 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
         background: linear-gradient(90deg, rgba(55, 224, 255, 0.35), transparent);
       }
       .fp3d-side {
-        position: relative;
         border-left: 1px solid var(--fp3d-line);
         background: var(--fp3d-chrome-solid);
         overflow-y: auto;
@@ -13522,6 +13724,8 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
         gap: 18px;
         min-height: 0;
       }
+      /* the grip's containing block; the overlay keeps its absolute position (#658: "position: relative" on
+         every side bar made the unpinned bar a third grid cell, which pushed the plan and the 3D pane aside) */
       .fp3d-side:not(.fp3d-side-overlay) {
         position: relative;
         z-index: 7;
@@ -15125,6 +15329,32 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
           font-size: 13px;
         }
       }
+      .fp3d-diag-invite {
+        position: absolute;
+        bottom: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 3;
+        width: min(560px, calc(100% - 24px));
+        box-sizing: border-box;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: var(--fp3d-chrome-solid);
+        border: 1px solid var(--fp3d-accent);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .fp3d-diag-invite > span:first-child {
+        flex: 1 1 260px;
+      }
+      .fp3d-diag-invite-buttons {
+        display: flex;
+        gap: 6px;
+      }
       .fp3d-tool-note {
         position: absolute;
         top: 8px;
@@ -15781,6 +16011,11 @@ Object.assign(sec, { x0: round(x0), x1: round(x1), z0: round(z0), z1: round(z1) 
         border-radius: 8px;
         padding: 7px 9px;
         margin: 2px 0 6px;
+      }
+      .fp3d-dev-all {
+        display: block;
+        padding: 2px 26px 6px;
+        font-size: 12px;
       }
       .fp3d-more {
         font: inherit;

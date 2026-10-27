@@ -128,6 +128,23 @@ def test_sentences_are_written_only_on_request_and_never_over_a_changed_file(tmp
     assert de.read_text(encoding="utf-8") == "my own sentences"
 
 
+def test_a_file_an_older_version_wrote_is_still_ours(tmp_path: Path) -> None:
+    """Files from 1.22.0 - 1.24.0 (older header lines) are replaced, not kept as the user's own."""
+    de = tmp_path / "custom_sentences" / "de" / "neonplan3d.yaml"
+    de.parent.mkdir(parents=True)
+    de.write_text(
+        sentences_yaml("de", "distinct").replace(
+            "# understands answers). Put your own sentences for NeonPlanAsk into another file.\n",
+            "# understands answers). Rewritten on every start: "
+            "put your own sentences for NeonPlanAsk into another file.\n",
+        ),
+        encoding="utf-8",
+    )
+    _, kept, changed = write_sentences(tmp_path, "distinct", {})
+    assert kept == [] and changed
+    assert de.read_text(encoding="utf-8") == sentences_yaml("de", "distinct")
+
+
 async def test_setup_writes_no_sentence_file(hass: HomeAssistant) -> None:
     """Nothing lands in the configuration folder unless an admin picks the sentences (HACS review)."""
     await _setup(hass)
@@ -140,3 +157,87 @@ async def test_unload_removes_service_and_intent(hass: HomeAssistant) -> None:
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert not hass.services.has_service(DOMAIN, "ask")
+
+
+# a file an early version wrote with its own, shorter set of sentences (seen on a real installation)
+_EARLY_FILE = """# Written by NeonPlan 3D: the sentences Assist hands to the open NeonPlan views (the first one that
+# understands answers). Rewritten on every start: put your own sentences for NeonPlanAsk into another file.
+language: "de"
+intents:
+  NeonPlanAsk:
+    data:
+      - sentences:
+          - "zeig[e] [mir] [mal] [bitte] {text}"
+          - "wo (ist|sind|steht|stehen) {text}"
+          - "gute nacht"
+lists:
+  text:
+    wildcard: true
+"""
+
+
+def test_an_early_file_with_other_sentences_is_still_ours(tmp_path: Path) -> None:
+    """Only NeonPlan's sentences under NeonPlan's header: replaced (it lacked "wer ist zu hause"); one sentence of
+    the user's own in it, and it stays."""
+    de = tmp_path / "custom_sentences" / "de" / "neonplan3d.yaml"
+    de.parent.mkdir(parents=True)
+    de.write_text(_EARLY_FILE, encoding="utf-8")
+    _, kept, changed = write_sentences(tmp_path, "distinct", {})
+    assert kept == [] and changed
+    assert "wer ist [gerade] (zu hause|zuhause|daheim)" in de.read_text(encoding="utf-8")
+    de.write_text(
+        _EARLY_FILE.replace('          - "gute nacht"\n', '          - "mach das licht aus"\n'), encoding="utf-8"
+    )
+    _, kept, _ = write_sentences(tmp_path, "distinct", {})
+    assert kept == ["de"]
+
+
+def test_the_names_locating_knows_are_a_list_not_a_wildcard(tmp_path: Path) -> None:
+    """ "Wo ist Frauke?" matches a list of names exactly, so Assist handles it locally and an AI agent behind it
+    never gets the question."""
+    de = tmp_path / "custom_sentences" / "de" / "neonplan3d.yaml"
+    hashes, _, _ = write_sentences(tmp_path, "distinct", {}, ["Torsten Apple Watch", "Torsten", 'Frau "K"'])
+    text = de.read_text(encoding="utf-8")
+    assert "wo (ist|steckt|sind) [der|die|das|mein|meine] {neonplan_who}" in text
+    assert '      - "Torsten Apple Watch"' in text and '      - "Frau \\"K\\""' in text
+    # the names change: the file follows; no names: the list goes
+    _, _, changed = write_sentences(tmp_path, "distinct", hashes, ["Torsten"])
+    assert changed and "Apple Watch" not in de.read_text(encoding="utf-8")
+    write_sentences(tmp_path, "distinct", {}, [])
+    assert "neonplan_who" not in de.read_text(encoding="utf-8")
+
+
+def test_an_older_file_with_fewer_sentences_is_still_ours(tmp_path: Path) -> None:
+    """A file of an older version had fewer sentences (no "wer ist zu hause"): replaced, not kept as the user's."""
+    de = tmp_path / "custom_sentences" / "de" / "neonplan3d.yaml"
+    de.parent.mkdir(parents=True)
+    de.write_text(
+        "# Written by NeonPlan 3D: the sentences Assist hands to the open NeonPlan views (the first one that\n"
+        "# understands answers). Rewritten on every start: put your own sentences for NeonPlanAsk into another file.\n"
+        'language: "de"\nintents:\n  NeonPlanAsk:\n    data:\n      - sentences:\n'
+        '          - "zeig[e] [mir] [mal] [bitte] {text}"\n          - "wo (ist|sind|steht|stehen) {text}"\n'
+        "lists:\n  text:\n    wildcard: true\n",
+        encoding="utf-8",
+    )
+    _, kept, changed = write_sentences(tmp_path, "distinct", {})
+    assert kept == [] and changed
+    # one sentence of the user's own in it: kept
+    de.write_text(
+        de.read_text(encoding="utf-8")
+        .replace("wildcard: true", "wildcard: true\n")
+        .replace('          - "zeig', '          - "mach das licht an"\n          - "zeig'),
+        encoding="utf-8",
+    )
+    _, kept, _ = write_sentences(tmp_path, "distinct", {})
+    assert kept == ["de"]
+
+
+def test_the_names_locating_knows_are_sentences(tmp_path: Path) -> None:
+    """ "Wo ist Frauke?" as a list of names (no wildcard): Assist matches it locally even with an AI agent."""
+    de = tmp_path / "custom_sentences" / "de" / "neonplan3d.yaml"
+    hashes, _, _ = write_sentences(tmp_path, "distinct", {}, ["Frauke", "Torstens iPhone"])
+    text = de.read_text(encoding="utf-8")
+    assert "{neonplan_who}" in text and '      - "Torstens iPhone"' in text
+    # names changed: the file is ours, so it is rewritten
+    _, kept, changed = write_sentences(tmp_path, "distinct", hashes, ["Frauke"])
+    assert kept == [] and changed and "Torstens iPhone" not in de.read_text(encoding="utf-8")

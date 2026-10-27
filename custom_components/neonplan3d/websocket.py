@@ -16,6 +16,8 @@ import voluptuous as vol
 from . import license as lic
 from .const import DATA_ASK, DATA_DIAGNOSTICS, DATA_VOICE, DOMAIN, SIGNAL_ASK, SIGNAL_BUILDING_UPDATED
 from .diagnostics_report import DiagnosticsError, DiagnosticsReporter
+from .locate.recorder import ws_locate_rec
+from .locate.ws import COMMANDS as LOCATE_COMMANDS
 from .packs import MAX_PACK_SIZE, PackError, module_sha, parts_of, verify_pack
 from .schema import BUILDING_SCHEMA, IMAGE_DATA
 from .storage import FloorplanData, complete
@@ -60,7 +62,10 @@ def async_register_commands(hass: HomeAssistant) -> None:
         ws_voice_answer,
         ws_voice_settings,
         ws_voice_settings_set,
+        ws_locate_rec,
     ):
+        websocket_api.async_register_command(hass, command)
+    for command in LOCATE_COMMANDS:
         websocket_api.async_register_command(hass, command)
 
 

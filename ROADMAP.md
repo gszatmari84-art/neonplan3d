@@ -6,8 +6,15 @@ What comes next. The order follows your wishes (issues, Discord and 👍 in [Dis
 
 **Principle:** everything you need to draw and control your home stays free. Safety (smoke, water, alarm, rain warning, power outage) is always free. What costs money are extra furniture packs and Pro add-ons with special live effects – paid once, no subscription, and whatever is installed keeps working forever.
 
-## ✅ Recently done (1.13 – 1.24)
+## ✅ Recently done (1.13 – 2.0)
 
+- **Locating** (2.0, free): who and what is where – from the Shelly plugs and ESPHome proxies you already have, learned in 90 seconds per room, without Bermuda; people as glowing figures, a sensor per device, "Where is my iPhone?".
+- **Garden on the ground** (2.0.4): garden items stand on the lawn and lowered terrain, round shadows, window boards on floor-to-ceiling windows, KNX contacts and shutters.
+- **Presence zones and fixes** (2.0.3): people stand at the sofa or door their presence sensor's zone names; gas and water meter readings; blinds outside on single outer walls, smoother pets.
+- **Locating on Android and by voice** (2.0.2): Android phones found through the Home Assistant app, watch and phone combined (a watch taken off is noticed), "Where is …?" flies the view into the room.
+- **Help improve** (2.0.1, opt-in): anonymous usage and error reports, off by default, every report visible before it is sent; HACS installs work again despite GitHub's download change.
+
+- **Issue round** (1.25): roofs meeting at right angles and overlapping sections, a hip at one end only, sill per window, windows across open room transitions, faster editor with 3D beside, more contrast in the day look.
 - **Modules with admin approval** (1.24): module code and every update run only after an admin read and approved them; Assist sentence files only on request.
 - **Furniture library 2.0** (1.23): everything sorted by what it is, room chips, pictures and sizes on the cards, one card per family of sizes, favourites, everyday search words; **free sizes with fixed parts**; **furniture wave 1** in the shop: five packs with 213 more models.
 - **The house talks back** (1.22): the voice module answers around forty kinds of questions (beta for supporters), further names for rooms and devices, Assist asks the house (service `neonplan3d.ask`, custom sentences, screen names).
@@ -27,21 +34,19 @@ What comes next. The order follows your wishes (issues, Discord and 👍 in [Dis
 - **Pools** in free shapes and above-ground pools, a balcony type, rain from your own weather station, power outage warning.
 - **Awnings** (five kinds), **waste bins and mailboxes**, **air conditioner**, glowing cooktops, ceiling height per room, free L/U sofas and U-stairs, lamps under roof slopes, feet and inches.
 - **Motorised curtains and roll-down screens** that move with their cover, **garage doors via a switch**.
-- **Household Pro** (beta, supporters first): bins with pickup tags, post in the mailbox, thirsty plants, washer and dryer time left.
+- **Household Pro** (1.26, out of beta): readable bin tags, next pickup only, "put out" per bin, post in the mailbox, thirsty plants, washer and dryer time left.
+- **Faster on wall tablets** (1.26): decorations rest when nobody touches the tablet, measured values every 2 s.
 - **Import page** (beta): Sweet Home 3D, iPhone LiDAR scans, DXF and more into a NeonPlan plan.
 - **Fun packs** Pets and Halloween, free with a customer account; taster packs for newsletter subscribers.
 - A tidied-up editor, furniture blocks and multi-select, 18 languages.
 
-## 🔨 Next up (1.25)
+## 🔨 Next up (2.1)
 
 | Topic | What it is about | Wish |
 |---|---|---|
-| Furniture wave 2 | Kids, garden & terrace (with an outdoor staircase under a roof), garage, home cinema, utility, fitness, smart home and architecture grow; then new packs: dining & hall, balcony, decoration & plants | – |
 | Modules, round 2 | Pro add-ons move into modules; the voice module leaves its beta | your feedback on Discord |
 | Roofs | Rotated roof sections, two roofs meeting at 90°, the floor edge under the roof | discussions #634, #605, #632 |
-| Even faster on old tablets | Fewer redraws, calmer warning pulses, a lower resolution on weak devices by itself | – |
-| Desk with height | A standing desk whose top moves with its height from Home Assistant (IKEA Idasen and others) | discussion #610 |
-| Underfloor heating | Heating zones on the floor that glow while they heat | discussion #607 |
+| Desk with height | A standing desk whose top moves with its height from Home Assistant | discussion #610 |
 | Air quality | VOC, CO₂ and particulate values in the room card and as a colour in the room | discussion #485 |
 | Buttons per room | Own buttons (a scene, a script) in a room or on a floor | discussion #603 |
 
@@ -75,7 +80,7 @@ What comes next. The order follows your wishes (issues, Discord and 👍 in [Dis
 
 ## Pro add-ons
 
-Available: **Camera Cockpit**, **Weather outside**, **Live screens**, **Energy Pro**, **Sound & Cinema**, **Car Pro**, **Time travel** and **Household Pro** (beta, supporters first – for everyone after the beta). Owners get improvements of their add-ons for free.
+Available: **Camera Cockpit**, **Weather outside**, **Live screens**, **Energy Pro**, **Sound & Cinema**, **Car Pro**, **Time travel** and **Household Pro**. **Heat Pro** (heat pump as a system in 3D) is in beta for supporters first. Owners get improvements of their add-ons for free.
 
 **Planned:**
 
@@ -93,14 +98,14 @@ Available: **Camera Cockpit**, **Weather outside**, **Live screens**, **Energy P
 - **Car Pro:** opening doors and hatches, departure time, charging cable to the wallbox.
 - **Camera Cockpit:** pan/tilt from 3D, talk at the doorbell.
 - **Sound & Cinema:** favourites per speaker.
-- **Household Pro:** after the beta for everyone in the shop; holographic plant card.
+- **Household Pro:** holographic plant card; one bin that changes colour with the next pickup.
 
 ## Furniture packs – planned
 
 - **Season & Decoration** – Christmas tree with fairy lights, Advent wreath, outdoor light chains, Easter (before Christmas).
 - **Stairs & railings** – the open U-stair with two quarter turns as wished (#547).
-- **Smart Home & Tech** – server rack with status LEDs (idea from the CasaNeon fork).
-- **Office & Gaming** – 3D printer workstation (idea from the CasaNeon fork), office container with drawers, gaming PC with LED fans.
+- **Smart Home & Tech** – server rack with status LEDs.
+- **Office & Gaming** – 3D printer workstation, office container with drawers, gaming PC with LED fans.
 - **Building services** – air conditioner outdoor unit, water tank with fill level (discussions #118, #138).
 - **Wellness** – infrared cabin, sauna and hot tub with temperature (discussion #176).
 - **Garden** – water feature with light, garden swing, concrete wall and gabions (discussion #170, Discord).
@@ -117,8 +122,15 @@ Was als Nächstes kommt. Die Reihenfolge richtet sich nach euren Wünschen (Issu
 
 **Grundsatz:** Alles, was du brauchst, um dein Zuhause abzubilden und zu bedienen, bleibt kostenlos. Sicherheit (Rauch, Wasser, Alarm, Regenwarnung, Stromausfall) ist immer kostenlos. Bezahlt werden zusätzliche Möbel-Packs und Pro-Erweiterungen mit besonderen Live-Effekten – einmal, ohne Abo, und was installiert ist, läuft für immer.
 
-## ✅ Zuletzt erledigt (1.13 – 1.24)
+## ✅ Zuletzt erledigt (1.13 – 2.0)
 
+- **Ortung** (2.0, kostenlos): Wer und was ist wo – über die Shelly-Steckdosen und ESPHome-Proxys, die du schon hast, in 90 Sekunden pro Raum eingelernt, ohne Bermuda; Personen als leuchtende Figuren, ein Sensor pro Gerät, „Wo ist mein iPhone?“.
+- **Garten auf dem Boden** (2.0.4): Gartenmöbel stehen auf Rasen und abgesenktem Gelände, runde Schatten, Fensterbänke an bodentiefen Fenstern, KNX-Kontakte und -Rollläden.
+- **Präsenzzonen und Korrekturen** (2.0.3): Personen stehen am Sofa oder an der Tür, die die Zone ihres Präsenzmelders nennt; Gas- und Wasserzählerstände; Rollläden außen an einzelnen Außenwänden, flüssigere Haustiere.
+- **Ortung mit Android und per Sprache** (2.0.2): Android-Handys über die Home-Assistant-App gefunden, Uhr und Handy zusammen ausgewertet (eine abgelegte Uhr wird erkannt), „Wo ist …?“ fliegt in den Raum.
+- **Hilf mit** (2.0.1, freiwillig): anonyme Nutzungs- und Fehlerberichte, standardmäßig aus, jeder Bericht vor dem Senden einsehbar; HACS-Installationen klappen trotz der Download-Änderung bei GitHub wieder.
+
+- **Fehler-Runde** (1.25): Dächer im rechten Winkel und überlappende Dachflächen, Walm nur an einem Ende, Fensterbank pro Fenster, Fenster über offene Raumübergänge, schnellerer Editor mit 3D daneben, mehr Kontrast im Tag-Look.
 - **Module mit Freigabe** (1.24): Modul-Code und jedes Update laufen erst, wenn ein Admin sie angesehen und freigegeben hat; Assist-Satzdateien nur auf Wunsch.
 - **Möbel-Bibliothek 2.0** (1.23): alles sortiert nach dem, was es ist, Raum-Chips, Bilder und Maße auf den Karten, eine Karte je Größen-Familie, Favoriten, Alltagswörter in der Suche; **freie Maße mit festen Teilen**; **Möbel-Welle 1** im Shop: fünf Packs mit 213 Modellen mehr.
 - **Das Haus spricht zurück** (1.22): das Sprach-Modul beantwortet rund vierzig Frage-Arten (Beta für Supporter), weitere Namen für Räume und Geräte, Assist fragt das Haus (Dienst `neonplan3d.ask`, eigene Sätze, Bildschirmnamen).
@@ -138,21 +150,19 @@ Was als Nächstes kommt. Die Reihenfolge richtet sich nach euren Wünschen (Issu
 - **Pools** in freier Form und Aufstellpools, Balkon als eigener Typ, Regen von der eigenen Wetterstation, Stromausfall-Warnung.
 - **Markisen** (fünf Arten), **Mülltonnen und Briefkästen**, **Klimagerät**, glühende Kochfelder, Deckenhöhe je Raum, L-/U-Sofa und U-Treppe kostenlos, Lampen unter Dachschrägen, Zoll und Fuß.
 - **Motorisierte Vorhänge und ausrollbare Leinwände**, die mit ihrem Cover fahren, **Garagentore per Schalter**.
-- **Haushalt Pro** (Beta, zuerst für Supporter): Mülltonnen mit Abhol-Schildchen, Post im Briefkasten, durstige Pflanzen, Restzeit von Waschmaschine und Trockner.
+- **Haushalt Pro** (1.26, Beta beendet): lesbare Tonnen-Schilder, nur nächste Abholung, „Rausgestellt“ pro Tonne, Post im Briefkasten, durstige Pflanzen, Restzeit von Waschmaschine und Trockner.
+- **Flüssiger auf Wandtablets** (1.26): Deko ruht, wenn niemand das Tablet berührt, Messwerte alle 2 s.
 - **Import-Seite** (Beta): Sweet Home 3D, iPhone-LiDAR-Scans, DXF und mehr werden zum NeonPlan-Plan.
 - **Fun-Packs** Haustiere und Halloween, gratis mit Kundenkonto; Schnupper-Packs für Newsletter-Abonnenten.
 - Ein aufgeräumter Editor, Möbel-Blöcke und Mehrfachauswahl, 18 Sprachen.
 
-## 🔨 Als Nächstes (1.25)
+## 🔨 Als Nächstes (2.1)
 
 | Thema | Worum es geht | Wunsch |
 |---|---|---|
-| Möbel-Welle 2 | Kinder, Garten & Terrasse (mit Außentreppe unter einem Dach), Garage, Heimkino, Hauswirtschaft, Fitness, Smart Home und Architektur wachsen; danach neue Packs: Esszimmer & Flur, Balkon, Deko & Pflanzen | – |
 | Module, Runde 2 | Die Pro-Erweiterungen ziehen in Module um; das Sprach-Modul verlässt die Beta | euer Feedback im Discord |
 | Dächer | Gedrehte Dachabschnitte, zwei Dächer im 90°-Winkel, die Etagenkante unterm Dach | Diskussionen #634, #605, #632 |
-| Noch schneller auf alten Tablets | Weniger Neuberechnungen, ruhigeres Pulsieren der Warnungen, auf schwachen Geräten von selbst eine niedrigere Auflösung | – |
-| Schreibtisch mit Höhe | Ein Steh-Schreibtisch, dessen Platte mit der Höhe aus Home Assistant hoch- und runterfährt (IKEA Idasen u. a.) | Diskussion #610 |
-| Fußbodenheizung | Heizzonen im Boden, die leuchten, solange sie heizen | Diskussion #607 |
+| Schreibtisch mit Höhe | Ein Steh-Schreibtisch, dessen Platte mit der Höhe aus Home Assistant hoch- und runterfährt | Diskussion #610 |
 | Luftqualität | VOC-, CO₂- und Feinstaubwerte in der Raumkarte und als Farbe im Raum | Diskussion #485 |
 | Knöpfe pro Raum | Eigene Knöpfe (eine Szene, ein Skript) in einem Raum oder auf einer Etage | Diskussion #603 |
 
@@ -186,7 +196,7 @@ Was als Nächstes kommt. Die Reihenfolge richtet sich nach euren Wünschen (Issu
 
 ## Pro-Erweiterungen
 
-Erhältlich: **Kamera-Cockpit**, **Wetter draußen**, **Bildschirme live**, **Energie Pro**, **Klang & Kino**, **Auto Pro**, **Zeitreise** und **Haushalt Pro** (Beta, zuerst für Supporter – nach der Beta für alle). Käufer bekommen Verbesserungen ihrer Erweiterungen kostenlos.
+Erhältlich: **Kamera-Cockpit**, **Wetter draußen**, **Bildschirme live**, **Energie Pro**, **Klang & Kino**, **Auto Pro**, **Zeitreise** und **Haushalt Pro**. **Wärme Pro** (die Wärmepumpe als System in 3D) ist in der Beta, zuerst für Supporter. Käufer bekommen Verbesserungen ihrer Erweiterungen kostenlos.
 
 **Geplant:**
 
@@ -204,14 +214,14 @@ Erhältlich: **Kamera-Cockpit**, **Wetter draußen**, **Bildschirme live**, **En
 - **Auto Pro:** bewegliche Türen und Klappen, Abfahrtszeit, Ladekabel zur Wallbox.
 - **Kamera-Cockpit:** Schwenken/Neigen aus 3D, an der Türklingel sprechen.
 - **Klang & Kino:** Favoriten je Lautsprecher.
-- **Haushalt Pro:** nach der Beta für alle im Shop; holografische Pflanzenkarte.
+- **Haushalt Pro:** holografische Pflanzenkarte; eine Tonne, die je nach nächster Abholung die Farbe wechselt.
 
 ## Möbel-Packs – geplant
 
 - **Saison & Deko** – Weihnachtsbaum mit Lichterkette, Adventskranz, Lichterketten außen, Ostern (vor Weihnachten).
 - **Treppen & Geländer** – die offene U-Treppe mit zwei Viertelwendelungen wie gewünscht (#547).
-- **Smart Home & Technik** – Server-Rack mit Status-LEDs (Idee aus dem Fork CasaNeon).
-- **Büro & Gaming** – 3D-Drucker-Arbeitsplatz (Idee aus dem Fork CasaNeon), Rollcontainer mit Schubladen, Gaming-PC mit LED-Lüftern.
+- **Smart Home & Technik** – Server-Rack mit Status-LEDs.
+- **Büro & Gaming** – 3D-Drucker-Arbeitsplatz, Rollcontainer mit Schubladen, Gaming-PC mit LED-Lüftern.
 - **Haustechnik** – Klima-Außengerät, Wassertank mit Füllstand (Diskussionen #118, #138).
 - **Wellness** – Infrarotkabine, Sauna und Whirlpool mit Temperatur (Diskussion #176).
 - **Garten** – Wasserspiel mit Licht, Hollywoodschaukel, Betonmauer und Gabionen (Diskussion #170, Discord).
