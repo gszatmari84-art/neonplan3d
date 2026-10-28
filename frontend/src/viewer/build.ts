@@ -127,13 +127,14 @@ export function buildFloorGeometry(
    * there: knee walls at the eaves, gables up to the ridge, inner walls cut by the slope.
    */
   roofUnder?: (x: number, z: number) => number | null,
+  extendToRoof?: (x: number, z: number) => boolean,
 ): FloorGeometry {
   const { walls, open: openRooms } = generateWalls(floor.rooms, { exterior: wallExterior, interior: wallInterior }, floor.walls ?? []);
   // the top of a wall at a point: its own height (a sloping wall's at that point), or the roof above when lower
   const topAt = (x: number, z: number, H: number, wall?: Wall): number => {
-    const own = wall?.slope ? Math.min(H, slopeTop(wall.slope, x, z)) : H;
+    const own = wall?.slope ? Math.min(H, slopeTop(wall.slope, x, z)) : Math.min(H, floor.height);
     const r = roofUnder ? roofUnder(x, z) : null;
-    return r === null ? own : Math.max(0.05, Math.min(own, r));
+    return r === null ? own : Math.max(0.05, extendToRoof?.(x, z) && !wall?.slope && wall?.height === undefined ? r : Math.min(own, r));
   };
   // a wall under a roof that lies below this floor's own level there (the corner of a room beside a hip, #638):
   // even the shortest stub would stand out above the roof's top face, so nothing is built there
@@ -313,7 +314,12 @@ export function buildFloorGeometry(
     const b = wallBucket.get(wall)!;
     const ax = unit([wall.b[0] - wall.a[0], wall.b[1] - wall.a[1]]);
     const list = (spans.get(wall) ?? []).sort((p, q) => p.s0 - q.s0);
-    const H = wallHeight(wall, floor.height);
+    const normalHeight = wallHeight(wall, floor.height);
+    const roofHeights = extendToRoof && wall.height === undefined && !wall.slope && roofUnder
+      ? wall.footprint.map(([x, z]) => extendToRoof(x, z) ? roofUnder(x, z) : null)
+          .filter((h): h is number => h !== null)
+      : [];
+    const H = Math.max(normalHeight, ...roofHeights);
     // pieces along the axis, cut at every opening edge: each piece leaves out all the openings above it
     // (two windows one above the other, a window over a door), the wall fills what remains
     const pieces: { t0: number; t1: number; ranges: [number, number][] }[] = [];
@@ -338,7 +344,7 @@ export function buildFloorGeometry(
     // under a roof the pieces are cut into short steps, so each step's top lies in one roof plane
     const len = Math.hypot(wall.b[0] - wall.a[0], wall.b[1] - wall.a[1]);
     // under a roof or with a sloping top of its own (D569)
-    const underRoof = (roofUnder || wall.slope) && lowestTop(wall.a, ax, 0, len, H, wall) < H - 1e-3;
+    const underRoof = !!((roofUnder || wall.slope) && (lowestTop(wall.a, ax, 0, len, H, wall) < H - 1e-3 || (extendToRoof && H > floor.height + 1e-3)));
     const steps = underRoof
       ? pieces.flatMap((piece) => {
           const t0 = Math.max(piece.t0, -0.5);

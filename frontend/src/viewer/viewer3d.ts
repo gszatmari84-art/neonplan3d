@@ -2321,7 +2321,17 @@ export class FloorplanViewer {
             return y === null ? null : y - floor.elevation;
           }
         : undefined;
-      const geo = buildFloorGeometry(withVehicles(floor, this.parked), b.settings.wall_exterior, b.settings.wall_interior, stairHoleParts(b.floors, floor), garden, roofUnder);
+      const extendToRoof = (x: number, z: number): boolean =>
+        (b.settings.roof.sections ?? []).some((section) =>
+          !section.open &&
+          section.shape === "hip" &&
+          section.points?.length === 6 &&
+          section.custom_ridge?.length === 2 &&
+          section.custom_ridge_height != null &&
+          section.custom_ridge_height > floor.elevation &&
+          pointInPolygon([x, z], section.points)
+        );
+      const geo = buildFloorGeometry(withVehicles(floor, this.parked), b.settings.wall_exterior, b.settings.wall_interior, stairHoleParts(b.floors, floor), garden, roofUnder, extendToRoof);
       const mask: FoldMasks = { standing: { value: 0xffff }, glass: { value: 0 } };
       const materials = this.makeMaterials(mask);
       const group = new Group();
