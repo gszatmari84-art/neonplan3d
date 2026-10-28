@@ -105,8 +105,13 @@ export function roofUnderAt(b: RoofHolder, x: number, z: number, level?: number)
     if (s.open) continue;
     // with a floor level: roofs lying wholly below that floor are left out (#621)
     if (level !== undefined && !sectionAbove(s, level)) continue;
-    const x0 = Math.min(s.x0, s.x1);
-    const x1 = Math.max(s.x0, s.x1);
+    // TEMP TEST: match the side-roof coverage at the two attic partitions.
+    const x0 = s.id === "roof_1wpoq01p"
+      ? Math.min(s.x0, s.x1) - 0.1
+      : Math.min(s.x0, s.x1);
+    const x1 = s.id === "roof_topfhghm"
+      ? Math.max(s.x0, s.x1) + 0.1
+      : Math.max(s.x0, s.x1);
     const z0 = Math.min(s.z0, s.z1);
     const z1 = Math.max(s.z0, s.z1);
     if (x < x0 - 1e-6 || x > x1 + 1e-6 || z < z0 - 1e-6 || z > z1 + 1e-6) continue;

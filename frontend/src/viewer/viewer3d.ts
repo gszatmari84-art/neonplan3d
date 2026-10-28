@@ -2321,8 +2321,30 @@ export class FloorplanViewer {
             return y === null ? null : y - floor.elevation;
           }
         : undefined;
-      const extendToRoof = (x: number, z: number): boolean =>
-        (b.settings.roof.sections ?? []).some((section) =>
+      const extendToRoof = (x: number, z: number, wall?: import("../geometry/walls.ts").Wall): boolean => {
+        if (wall) {
+          const dx = wall.b[0] - wall.a[0];
+          const dz = wall.b[1] - wall.a[1];
+          const len = Math.hypot(dx, dz);
+          if (len > 1e-6) {
+            const nx = -dz / len;
+            const nz = dx / len;
+            const sampleSide = (side: number): string | null => {
+              const distance = side < 0 ? -(wall.right + 0.05) : wall.left + 0.05;
+              for (const t of [0.25, 0.5, 0.75]) {
+                const px = wall.a[0] + dx * t + nx * distance;
+                const pz = wall.a[1] + dz * t + nz * distance;
+                const room = floor.rooms.find((r) => r.points.length >= 3 && pointInPolygon([px, pz], r.points));
+                if (room) return room.id;
+              }
+              return null;
+            };
+            const first = sampleSide(-1);
+            const second = sampleSide(1);
+            if (first && second && first !== second) return false;
+          }
+        }
+        return (b.settings.roof.sections ?? []).some((section) =>
           !section.open &&
           section.shape === "hip" &&
           section.points?.length === 6 &&
@@ -2331,6 +2353,7 @@ export class FloorplanViewer {
           section.custom_ridge_height > floor.elevation &&
           pointInPolygon([x, z], section.points)
         );
+      };
       const geo = buildFloorGeometry(withVehicles(floor, this.parked), b.settings.wall_exterior, b.settings.wall_interior, stairHoleParts(b.floors, floor), garden, roofUnder, extendToRoof);
       const mask: FoldMasks = { standing: { value: 0xffff }, glass: { value: 0 } };
       const materials = this.makeMaterials(mask);

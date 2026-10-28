@@ -127,14 +127,16 @@ export function buildFloorGeometry(
    * there: knee walls at the eaves, gables up to the ridge, inner walls cut by the slope.
    */
   roofUnder?: (x: number, z: number) => number | null,
-  extendToRoof?: (x: number, z: number) => boolean,
+  extendToRoof?: (x: number, z: number, wall?: Wall) => boolean,
 ): FloorGeometry {
   const { walls, open: openRooms } = generateWalls(floor.rooms, { exterior: wallExterior, interior: wallInterior }, floor.walls ?? []);
   // the top of a wall at a point: its own height (a sloping wall's at that point), or the roof above when lower
   const topAt = (x: number, z: number, H: number, wall?: Wall): number => {
     const own = wall?.slope ? Math.min(H, slopeTop(wall.slope, x, z)) : Math.min(H, floor.height);
     const r = roofUnder ? roofUnder(x, z) : null;
-    return r === null ? own : Math.max(0.05, extendToRoof?.(x, z) && !wall?.slope && wall?.height === undefined ? r : Math.min(own, r));
+    if (r === null) return own;
+    const followsRoof = extendToRoof?.(x, z, wall) && !wall?.slope && wall?.height === undefined;
+    return Math.max(0.05, followsRoof ? Math.min(H, r) : Math.min(own, r));
   };
   // a wall under a roof that lies below this floor's own level there (the corner of a room beside a hip, #638):
   // even the shortest stub would stand out above the roof's top face, so nothing is built there
@@ -316,7 +318,7 @@ export function buildFloorGeometry(
     const list = (spans.get(wall) ?? []).sort((p, q) => p.s0 - q.s0);
     const normalHeight = wallHeight(wall, floor.height);
     const roofHeights = extendToRoof && wall.height === undefined && !wall.slope && roofUnder
-      ? wall.footprint.map(([x, z]) => extendToRoof(x, z) ? roofUnder(x, z) : null)
+      ? wall.footprint.map(([x, z]) => extendToRoof(x, z, wall) ? roofUnder(x, z) : null)
           .filter((h): h is number => h !== null)
       : [];
     const H = Math.max(normalHeight, ...roofHeights);
