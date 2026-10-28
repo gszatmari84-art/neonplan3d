@@ -891,6 +891,23 @@ export function roofFaceIntersection(
 
   return roofPlaneIntersection(planeA, planeB);
 }
+/** Intersection of two roof-section faces in house XZ coordinates. */
+export function roofSectionFaceIntersection(
+  first: RoofSection,
+  firstFaceIndex: number,
+  second: RoofSection,
+  secondFaceIndex: number,
+): { a: number; b: number; c: number } | null {
+  const zero = { u0: 0, u1: 0, a: 0, b: 0 };
+  const firstFace = sectionGeometry(first, zero).faces[firstFaceIndex];
+  const secondFace = sectionGeometry(second, zero).faces[secondFaceIndex];
+  if (!firstFace || !secondFace) return null;
+
+  return roofFaceIntersection(
+    roofFaceToWorld(first, firstFace),
+    roofFaceToWorld(second, secondFace),
+  );
+}
 /** Intersection segment of a line with a convex roof face in house coordinates. */
 export function roofLineSegment(
   face: Q[],
