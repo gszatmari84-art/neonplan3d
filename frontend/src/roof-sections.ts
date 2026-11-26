@@ -140,7 +140,8 @@ export function roofUnderAt(b: RoofHolder, x: number, z: number, level?: number)
   const o = Math.max(0, b.settings.roof.overhang ?? 0);
   // where sections overlap, the higher roof is the ceiling: a dormer or a cross gable over the main
   // slope, a lower annex roof running under a higher one
-  const all = activeSections(b);
+  const original = activeSections(b);
+  const all = original.map((sec) => extendAdjacentPentRoof(sec, original));
   for (const s of all) {
     if (s.open) continue;
     // with a floor level: roofs lying wholly below that floor are left out (#621)
@@ -409,6 +410,32 @@ export function sectionGeometry(s: RoofSection, ov: SectionOverhang): SectionGeo
     const pg: [number, number][] = [[0, pr.y(0)], [w, pr.y(w)]];
     return { faces: [c], rim: c, ridges: [[b1, b0]], gable: pg, gables: [pg, pg] };
   }
+// Experimental six-sided bay hip: the points run around the eaves from
+// rear-left -> left shoulder -> front-left -> front-right -> right shoulder -> rear-right.
+// The ridge runs from the rear (main roof) to its outer end. No automatic valleys.
+if (s.shape === "hip" && s.points?.length === 6 && s.custom_ridge?.length === 2 &&
+    Number.isFinite(s.custom_ridge_height)) {
+  const local = (p: Vec2, y: number): Q => {
+    const [u, v] = sectionUV(s, p[0], p[1]);
+    return [u, v, y];
+  };
+  const eave = s.eave_a;
+  const p = s.points.map((pt) => local(pt, eave));
+  const r0 = local(s.custom_ridge[0], s.custom_ridge_height!);
+  const r1 = local(s.custom_ridge[1], s.custom_ridge_height!);
+  return {
+    faces: [
+      [p[0], p[1], r1, r0],
+      [p[1], p[2], r1],
+      [p[2], p[3], r1],
+      [p[3], p[4], r1],
+      [p[4], p[5], r0, r1],
+    ],
+    rim: p,
+    ridges: [[r0, r1], [p[1], r1], [p[2], r1], [p[3], r1], [p[4], r1]],
+    gable: null, gables: [null, null],
+  };
+}
   if (s.shape === "pyramid") {
     // hips rise from the corners up to one point
     const rs: Q = [(fr.u0 + fr.u1) / 2, pr.vr, pr.rh];
@@ -1228,4 +1255,85 @@ export function wingSection(s: RoofSection, junction: { host: RoofSection; end: 
     copy.z1 = junction.end === 1 ? Math.max(box.z1, ridgeU) : box.z1;
   }
   return copy;
+}
+
+export function extendRoofSectionToPolygonRidge(
+  section: RoofSection,
+  polygon: RoofSection,
+): RoofSection {
+  const ridge = polygon.custom_ridge;
+  if (!ridge || ridge.length !== 2) return section;
+
+  const [a, b] = ridge;
+  const dx = Math.abs(a[0] - b[0]);
+  const dz = Math.abs(a[1] - b[1]);
+
+  if (dx < 1e-8 && dz > 1e-8) {
+    return extendRoofSectionToRidge(section, a[0], "x");
+  }
+
+  if (dz < 1e-8 && dx > 1e-8) {
+    return extendRoofSectionToRidge(section, a[1], "z");
+  }
+
+  return section;
+}
+export function extendRoofSectionToRidge(
+  section: RoofSection,
+  ridgeCoordinate: number,
+  axis: "x" | "z" = "x",
+): RoofSection {
+  const startKey = axis === "x" ? "x0" : "z0";
+  const endKey = axis === "x" ? "x1" : "z1";
+
+  const start = section[startKey];
+  const end = section[endKey];
+  const lower = Math.min(start, end);
+  const upper = Math.max(start, end);
+
+  if (upper < ridgeCoordinate) {
+    const key = start > end ? startKey : endKey;
+    return { ...section, [key]: ridgeCoordinate };
+  }
+
+  if (lower > ridgeCoordinate) {
+    const key = start < end ? startKey : endKey;
+    return { ...section, [key]: ridgeCoordinate };
+  }
+
+  return section;
+}
+
+export function extendAdjacentPentRoof(
+  sec: RoofSection,
+  sections: readonly RoofSection[],
+  drawn: RoofSection = sec,
+): RoofSection {
+
+    if (sec.shape === "pent" && !sec.open && !sec.rotation) {
+      for (const hip of sections) {
+        if (hip.shape !== "hip" ||
+            hip.points?.length !== 6 ||
+            hip.custom_ridge?.length !== 2 ||
+            !Number.isFinite(hip.custom_ridge_height)) continue;
+
+        const xs = hip.points.map(p => p[0]);
+        const zs = hip.points.map(p => p[1]);
+
+        const overlapX =
+          Math.min(Math.max(sec.x0, sec.x1), Math.max(...xs)) -
+          Math.max(Math.min(sec.x0, sec.x1), Math.min(...xs));
+
+        const overlapZ =
+          Math.min(Math.max(sec.z0, sec.z1), Math.max(...zs)) -
+          Math.max(Math.min(sec.z0, sec.z1), Math.min(...zs));
+
+        if (overlapX > 1e-6 && overlapZ > 1e-6) {
+          drawn = extendRoofSectionToPolygonRidge(drawn, hip);
+        }
+      }
+    }
+
+
+  return drawn;
 }

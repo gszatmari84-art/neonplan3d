@@ -488,6 +488,10 @@ export type RoofEnd = (typeof ROOF_ENDS)[number];
  * slope can reach further down (a catslide over a lower part). A pent roof rises from side a.
  */
 export interface RoofSection {
+  /** Custom ridge endpoints for polygonal roof sections. */
+  custom_ridge?: [Vec2, Vec2] | null;
+  /** Custom ridge height in metres. */
+  custom_ridge_height?: number | null;
   id: string;
   x0: number;
   z0: number;

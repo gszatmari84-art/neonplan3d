@@ -7,7 +7,7 @@ import { Color } from "three";
 import type { Building, Floor, RoofSection, SolarField, Vec2 } from "../model.ts";
 import { pointInPolygon, polygonArea } from "../model.ts";
 import { generateWalls, slopeTop } from "../geometry/walls.ts";
-import { coversIn, crossAsWing, cutHole, cutUnder, lineOutside, meetLine, sectionCovers, sectionFloor, sectionsCut, dormerHoles, dormerParent, effectiveDormer, turnedDormer, offsetPolygon, sectionGeometry, sectionHeightAt, sectionPolygon, sectionFrame, sectionOverhang, sectionProfile, sectionUV, wingJunction, wingSection, type LocalCover, type Q, type SectionOverhang } from "../roof-sections.ts";
+import { extendAdjacentPentRoof, coversIn, crossAsWing, cutHole, cutUnder, lineOutside, meetLine, sectionCovers, sectionFloor, sectionsCut, dormerHoles, dormerParent, effectiveDormer, turnedDormer, offsetPolygon, sectionGeometry, sectionHeightAt, sectionPolygon, sectionFrame, sectionOverhang, sectionProfile, sectionUV, wingJunction, wingSection, type LocalCover, type Q, type SectionOverhang } from "../roof-sections.ts";
 import { DEG, GeoBuffer, LineBuffer, pushPrism, shade } from "./geo.ts";
 import { fieldModules, roofFaces, roofFootprint, roofWindowRoom, windowCorners, type RoofFace } from "../solar.ts";
 import { palette } from "./palette.ts";
@@ -289,7 +289,9 @@ function buildSections(b: Building, sections: readonly RoofSection[], overhang: 
       const parent = dormerParent(sections, sec);
       const junction = parent ? null : wingJunction(sections, sec);
       // a turned cross gable keeps its whole length: its roof cuts it where it runs under the slope
-      const drawn = parent ? (turnedDormer(sections, sec) ? sec : effectiveDormer(parent, sec)) : junction ? wingSection(sec, junction) : sec;
+      let drawn = parent ? (turnedDormer(sections, sec) ? sec : effectiveDormer(parent, sec)) : junction ? wingSection(sec, junction) : sec;
+
+      drawn = extendAdjacentPentRoof(sec, usable, drawn);
       const own = sectionOverhang(b, parent ? drawn : sec, drawn.overhang ?? overhang);
       const ov: SectionOverhang = junction ? { ...own, [junction.end === 0 ? "u0" : "u1"]: 0 } : own;
       const sloped = !drawn.open && drawn.shape !== "flat" && drawn.shape !== "parapet";
